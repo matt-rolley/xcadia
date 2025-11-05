@@ -1,15 +1,30 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import PortfolioModuleService from "@/modules/portfolio/service"
 import { PORTFOLIO_MODULE } from "@/modules/portfolio"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
-// GET /admin/portfolios/:id - Get a single portfolio
+// GET /admin/portfolios/:id - Get a single portfolio with linked data
 export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void> {
   const { id } = req.params
-  const portfolioModuleService: PortfolioModuleService = req.scope.resolve(PORTFOLIO_MODULE)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
 
   try {
-    const portfolio = await portfolioModuleService.retrievePortfolio(id)
-    res.json({ portfolio })
+    const { data: portfolios } = await query.graph({
+      entity: "portfolio",
+      fields: [
+        "*",
+        "projects.*",
+        "projects.portfolios.display_order",
+      ],
+      filters: { id },
+    })
+
+    if (!portfolios || portfolios.length === 0) {
+      res.status(404).json({ error: "Portfolio not found" })
+      return
+    }
+
+    res.json({ portfolio: portfolios[0] })
   } catch (error) {
     res.status(404).json({ error: "Portfolio not found" })
   }

@@ -1,4 +1,5 @@
 import { model } from "@medusajs/framework/utils"
+import Portfolio from "./portfolio"
 
 const Project = model.define("project", {
   id: model.id().primaryKey(),
@@ -11,6 +12,11 @@ const Project = model.define("project", {
   is_featured: model.boolean().default(false),
   display_order: model.number().default(0), // For custom sorting
   metadata: model.json().nullable(), // Custom metadata (dimensions, duration, etc.)
+
+  // Many-to-many relationship to portfolios through portfolio_project pivot
+  portfolios: model.manyToMany(() => Portfolio, {
+    mappedBy: "projects",
+  }),
 })
 
 export default Project

@@ -2,17 +2,24 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import PortfolioModuleService from "@/modules/portfolio/service"
 import { PORTFOLIO_MODULE } from "@/modules/portfolio"
 import { createProjectWorkflow } from "@/workflows/portfolio/create-project"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
-// GET /admin/projects - List all projects (filtered by team)
+// GET /admin/projects - List all projects with linked data (filtered by team)
 export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void> {
-  const portfolioModuleService: PortfolioModuleService = req.scope.resolve(PORTFOLIO_MODULE)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const teamId = (req as any).team_id
 
-  const projects = await portfolioModuleService.listProjects({
+  const { data: projects } = await query.graph({
+    entity: "project",
+    fields: [
+      "*",
+      "portfolios.*",
+      "portfolios.projects.display_order", // Access pivot table field
+    ],
     filters: teamId ? { team_id: teamId } : {},
   })
 
-  res.json({ projects: Array.isArray(projects) ? projects : [projects] })
+  res.json({ projects })
 }
 
 // POST /admin/projects - Create a new project
