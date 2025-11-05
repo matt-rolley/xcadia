@@ -103,5 +103,15 @@ export default defineMiddlewares({
       matcher: "/admin/teams/:id/members*",
       middlewares: [validateTeamMemberMiddleware],
     },
+    // Protect admin company routes
+    {
+      matcher: "/admin/companies*",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    // Inject team context for company routes
+    {
+      matcher: "/admin/companies*",
+      middlewares: [teamContextMiddleware],
+    },
   ],
 })
