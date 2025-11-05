@@ -21,6 +21,9 @@ module.exports = defineConfig({
       resolve: "./src/modules/company",
     },
     {
+      resolve: "./src/modules/portfolio",
+    },
+    {
       resolve: "@medusajs/medusa/notification",
       options: {
         providers: [

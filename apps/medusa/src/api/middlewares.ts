@@ -113,5 +113,25 @@ export default defineMiddlewares({
       matcher: "/admin/companies*",
       middlewares: [teamContextMiddleware],
     },
+    // Protect admin portfolio routes
+    {
+      matcher: "/admin/portfolios*",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    // Inject team context for portfolio routes
+    {
+      matcher: "/admin/portfolios*",
+      middlewares: [teamContextMiddleware],
+    },
+    // Protect admin project routes
+    {
+      matcher: "/admin/projects*",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    // Inject team context for project routes
+    {
+      matcher: "/admin/projects*",
+      middlewares: [teamContextMiddleware],
+    },
   ],
 })
