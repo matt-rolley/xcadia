@@ -17,7 +17,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
 
 // POST /admin/projects - Create a new project
 export async function POST(req: MedusaRequest, res: MedusaResponse): Promise<void> {
-  const { team_id, company_id, title, description, category, tags, is_featured, display_order, metadata } = req.body as any
+  const { team_id, title, ...rest } = req.body as any
 
   if (!team_id || !title) {
     res.status(400).json({ error: "Missing required fields: team_id, title" })
@@ -25,7 +25,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse): Promise<voi
   }
 
   const { result } = await createProjectWorkflow(req.scope).run({
-    input: { team_id, company_id, title, description, category, tags, is_featured, display_order, metadata },
+    input: { team_id, title, ...rest },
   })
 
   res.status(201).json({ project: result.project })

@@ -31,8 +31,26 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
     return
   }
 
-  // TODO: Implement password check if password_hash exists
-  // For now, we'll skip password validation
+  // Check password protection (simple access code, not encrypted)
+  if (portfolio.password_hash) {
+    const password = req.query.password as string || (req.body as any)?.password
+
+    if (!password) {
+      res.status(401).json({
+        error: "Password required",
+        requires_password: true,
+      })
+      return
+    }
+
+    if (password !== portfolio.password_hash) {
+      res.status(401).json({
+        error: "Invalid password",
+        requires_password: true,
+      })
+      return
+    }
+  }
 
   // Increment view count
   await portfolioModuleService.updatePortfolioes({
@@ -41,4 +59,10 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
   })
 
   res.json({ portfolio })
+}
+
+// POST /store/portfolios/:slug - Public portfolio viewer with password in body
+export async function POST(req: MedusaRequest, res: MedusaResponse): Promise<void> {
+  // Reuse GET logic - POST allows sending password in body for security
+  return GET(req, res)
 }
