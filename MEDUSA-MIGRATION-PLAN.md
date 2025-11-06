@@ -996,13 +996,271 @@ src/admin/
 
 ---
 
+## Third-Party Integrations & Analytics
+
+### Phase 7: Integrations & Analytics (Future)
+**Goal**: Connect Xcadia with external services for authentication, automation, and analytics
+
+#### Authentication Providers
+1. **Google OAuth Integration**
+   - Follow official guide: https://docs.medusajs.com/resources/commerce-modules/auth/auth-providers/google
+   - Allow users to sign up/login with Google accounts
+   - Simplifies onboarding flow for new teams
+   - Implementation:
+     - Install Google auth provider module
+     - Configure OAuth credentials in environment variables
+     - Add Google sign-in button to login/signup UI
+     - Link Google accounts to existing Team Members
+
+#### Analytics & Tracking
+2. **Analytics Platform Integration** (Choose one or multiple):
+   - **Segment**: Universal data pipeline for all analytics tools
+     - Track user actions, portfolio sends, conversions
+     - Route data to multiple analytics platforms
+     - Server-side tracking for accurate metrics
+   - **PostHog**: Product analytics and feature flags
+     - Session replays for debugging user issues
+     - Feature flags for gradual rollouts
+     - Funnel analysis for conversion optimization
+   - **Google Analytics 4**: Standard web analytics
+     - Page views, user flows, bounce rates
+     - Integration with Google Ads for marketing
+   - **Google Tag Manager**: Tag management for marketing pixels
+     - Manage tracking scripts without code deploys
+     - Facebook Pixel, LinkedIn Insight Tag, etc.
+
+   **Implementation Approach**:
+   - Create Analytics Module with configurable providers
+   - Track key events via Medusa Event Bus subscribers:
+     - User signup / team creation
+     - Project created / published
+     - Portfolio sent / opened / clicked
+     - Deal created / quote sent / deal won
+     - Subscription started / upgraded / cancelled
+   - Server-side tracking for accuracy (immune to ad blockers)
+   - Client-side tracking for web analytics (page views, sessions)
+
+#### Automation & Webhooks
+3. **Zapier Integration**
+   - Expose webhook endpoints for Zapier triggers:
+     - Portfolio sent → Trigger Zapier automation
+     - Deal won → Create invoice in accounting software
+     - New contact → Add to CRM (HubSpot, Salesforce)
+     - Email opened → Notify in Slack
+   - Implementation:
+     - Create public webhook API routes (with authentication)
+     - Document webhook payloads for Zapier configuration
+     - Use Medusa Event Bus to emit events to webhooks
+     - Support multiple webhook URLs per team (for different automations)
+   - Example use cases:
+     - Portfolio sent → Add contact to Mailchimp list
+     - Deal won → Create project in Asana
+     - New team member → Send Slack notification
+
+#### Technical Implementation Notes
+- **Analytics Events**: Use Medusa Event Bus subscribers to track events
+- **Server-side Tracking**: More accurate than client-side (ad blockers, privacy)
+- **Privacy Compliance**: Respect GDPR/CCPA - allow users to opt-out
+- **Team-scoped**: Each team can configure their own integrations
+- **Async Processing**: Don't block workflows waiting for analytics/webhooks
+- **Error Handling**: Failed analytics/webhook calls shouldn't break core functionality
+- **Security**: Webhook secrets, OAuth tokens stored securely in database
+
+**✅ Commit**: `git commit -m "feat: phase 7 - integrations and analytics"`
+
+**Resources**:
+- [Google Auth Provider Guide](https://docs.medusajs.com/resources/commerce-modules/auth/auth-providers/google)
+- [Medusa Event Bus](https://docs.medusajs.com/learn/fundamentals/events-and-subscribers)
+- [Segment Documentation](https://segment.com/docs/)
+- [PostHog Documentation](https://posthog.com/docs)
+- [Zapier Webhooks Guide](https://zapier.com/help/create/code-webhooks/trigger-zaps-from-webhooks)
+
+### Phase 8: CSV Import & Custom Email Domains
+**Goal**: Enable easy data migration via CSV imports and custom domain email sending
+
+#### CSV Import System
+1. **Import Module** (team-scoped background job processing)
+   - Create ImportJob model:
+     - `team_id` - for multi-tenancy isolation
+     - `entity_type` - enum: "company", "contact", "deal"
+     - `status` - enum: "pending", "processing", "completed", "failed"
+     - `file_url` - uploaded CSV file (via Medusa File Module)
+     - `total_rows` - count from CSV
+     - `processed_rows` - progress counter
+     - `created_count` - successful creates
+     - `updated_count` - successful updates
+     - `skipped_count` - duplicates/errors
+     - `error_log` - JSON array of errors with row numbers
+     - `started_at`, `completed_at` - timestamps
+     - `metadata` - import settings (duplicate handling, etc.)
+
+2. **Import Workflows** (background processing with Medusa workflows)
+   - `import-companies-workflow.ts`:
+     - Parse CSV file
+     - Validate rows (required fields)
+     - Create companies in batches (100 at a time)
+     - Update ImportJob progress after each batch
+     - Handle duplicates (check by name + team_id)
+
+   - `import-contacts-workflow.ts`:
+     - Parse CSV file
+     - Validate emails, required fields
+     - Auto-create companies if company name doesn't exist
+     - Create contacts in batches
+     - Update ImportJob progress
+     - Handle duplicates (check by email + team_id)
+
+   - `import-deals-workflow.ts`:
+     - Parse CSV file with deal data
+     - Link to existing companies (by name match)
+     - Create deals with scenarios/line items
+     - Update ImportJob progress
+     - Handle duplicates (check by name + company + team_id)
+
+3. **API Routes**
+   - `POST /admin/import/companies` - Upload CSV, create ImportJob, trigger workflow
+   - `POST /admin/import/contacts` - Upload CSV, create ImportJob, trigger workflow
+   - `POST /admin/import/deals` - Upload CSV, create ImportJob, trigger workflow
+   - `GET /admin/import/jobs` - List all import jobs for team (paginated)
+   - `GET /admin/import/jobs/:id` - Get import job status and results
+   - `DELETE /admin/import/jobs/:id` - Cancel/delete import job
+
+4. **CSV Format Requirements** (documented for frontend)
+   - **Companies CSV**: `name,industry,website,notes`
+   - **Contacts CSV**: `first_name,last_name,email,phone,job_title,company_name,notes`
+   - **Deals CSV**: `name,company_name,deal_type,stage,description,amount,currency`
+   - Frontend handles column mapping before sending to API
+   - Backend expects columns in exact format above
+
+5. **Background Processing**
+   - Use Medusa workflows for async processing (don't block HTTP request)
+   - Send notification email when import completes:
+     - Success: "Import completed: 50 created, 10 updated, 5 skipped"
+     - Failure: "Import failed: [error message]" with downloadable error log
+   - Use Notification Module with IMPORT_COMPLETE template
+
+#### Custom Email Domains (Resend Integration)
+1. **Team Email Settings Model**
+   - Add fields to Team model or create TeamEmailSettings model:
+     - `custom_domain` - e.g., "agency.com" (nullable)
+     - `domain_verified` - boolean (Resend verification status)
+     - `from_email` - e.g., "portfolios@agency.com" or null for default
+     - `from_name` - e.g., "Agency Name" (for email display name)
+     - `sender_mode` - enum: "team" (use from_email) or "user" (use sender's email)
+     - `dns_records` - JSON (SPF, DKIM, DMARC records from Resend)
+     - `verified_at` - timestamp when domain was verified
+
+2. **Domain Management Workflows**
+   - `add-custom-domain-workflow.ts`:
+     - Call Resend API to add domain
+     - Store DNS records needed for verification
+     - Set domain_verified = false
+     - Return DNS records to user for setup
+
+   - `verify-domain-workflow.ts`:
+     - Call Resend API to check verification status
+     - Update domain_verified status
+     - Send notification email if verified
+
+   - `remove-domain-workflow.ts`:
+     - Remove domain from Resend
+     - Reset team email settings to default
+
+3. **API Routes**
+   - `POST /admin/team/email/domain` - Add custom domain, get DNS records
+   - `POST /admin/team/email/domain/verify` - Check verification status
+   - `DELETE /admin/team/email/domain` - Remove custom domain
+   - `PATCH /admin/team/email/settings` - Update from_email, from_name, sender_mode
+   - `GET /admin/team/email/settings` - Get current email settings
+
+4. **Update Resend Service**
+   - Modify `send()` method to use team's custom domain:
+     - Check if team has verified custom domain
+     - If sender_mode = "team": use team's from_email
+     - If sender_mode = "user": use sending user's email (if on verified domain)
+     - Fallback: use default RESEND_FROM_EMAIL from env
+   - Pass team context through notification.data
+   - Validate sender email is on verified domain
+
+5. **DNS Setup UI** (Admin Dashboard using Medusa UI)
+   - Display DNS records with copy buttons
+   - Show verification status (pending/verified)
+   - Refresh button to check verification
+   - Instructions for adding DNS records to domain registrar
+   - Initial implementation in Medusa Admin, migrate to frontend later
+
+6. **Subscription Add-on** (Future: Phase 6 integration)
+   - Add "Custom Domain" as product variant or feature flag
+   - Check subscription tier before allowing domain setup
+   - Middleware to enforce custom domain limits
+
+#### Technical Implementation Notes
+- **CSV Processing**: Use streaming for large files (don't load entire CSV into memory)
+- **Batch Processing**: Process imports in batches (100-500 rows) to avoid timeouts
+- **Error Handling**: Store detailed error logs with row numbers for user review
+- **Duplicate Detection**: Check by unique fields + team_id (name, email, etc.)
+- **Progress Tracking**: Use ImportJob model to track progress, show in UI
+- **Email Notifications**: Send via Notification Module when imports complete
+- **Domain Verification**: Poll Resend API to check DNS propagation (can take 24-48 hours)
+- **Sender Authentication**: Validate sender email against verified domains
+- **Security**: Only team members can manage domains and imports (team isolation)
+
+#### CSV Import Examples
+
+**companies.csv**:
+```csv
+name,industry,website,notes
+Acme Corp,Technology,https://acme.com,Potential client
+Fashion Brand X,Retail,https://fashionx.com,Past client
+```
+
+**contacts.csv**:
+```csv
+first_name,last_name,email,phone,job_title,company_name,notes
+John,Doe,john@acme.com,555-0100,CTO,Acme Corp,Met at conference
+Jane,Smith,jane@fashionx.com,555-0200,Marketing Director,Fashion Brand X,Referred by Sarah
+```
+
+**deals.csv**:
+```csv
+name,company_name,deal_type,stage,description,amount,currency
+Website Redesign,Acme Corp,project,proposal,Full site redesign,50000,USD
+Marketing Campaign,Fashion Brand X,retainer,negotiation,6-month retainer,30000,USD
+```
+
+**✅ Commit**: `git commit -m "feat: phase 8 - csv import and custom email domains"`
+
+**Test Before Moving On**:
+- Upload companies CSV and verify background processing
+- Upload contacts CSV with auto-company creation
+- Check import job status and progress updates
+- Verify email notification on import completion
+- Add custom domain and get DNS records
+- Verify domain after DNS setup
+- Send portfolio email from custom domain
+- Test sender_mode toggle (team vs user email)
+
+**Resources**:
+- [Resend Domain API](https://resend.com/docs/api-reference/domains)
+- [Medusa File Module](https://docs.medusajs.com/resources/commerce-modules/file)
+- [Medusa Workflows](https://docs.medusajs.com/learn/fundamentals/workflows)
+- [CSV Parsing (Bun)](https://bun.sh/docs/api/file-io#reading-files)
+
+---
+
 ## Next Steps
 
 1. ✅ **Review this document** - Confirmed all technical decisions
 2. ✅ **Multi-tenancy strategy chosen** - Custom Team Module
-3. **Start with Phase 1** - Implement Team Module foundation
-4. **Follow Medusa UI guidelines** - Use only Medusa UI components for admin
-5. **Iterate through phases** building Portfolio → Email → Deal → Subscription
+3. ✅ **Phase 1 Complete** - Team Module foundation implemented
+4. ✅ **Phase 2 Complete** - CRM Foundation (Company + Contact)
+5. ✅ **Phase 3 Complete** - Portfolio System
+6. ✅ **Phase 4 Complete** - Email & Tracking System
+7. **Continue with Phase 5** - Deal/Quote System
+8. **Then Phase 6** - Usage & Subscription
+9. **Future: Phase 7** - Integrations & Analytics (Google OAuth, Segment/PostHog, Zapier webhooks)
+10. **Future: Phase 8** - CSV Import & Custom Email Domains (data migration, Resend custom domains)
+11. **Follow Medusa UI guidelines** - Use only Medusa UI components for admin
 
 ---
 
