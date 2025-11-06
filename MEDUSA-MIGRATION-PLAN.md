@@ -659,6 +659,12 @@ apps/medusa/src/
 ### Phase 4.5: Core UX & Collaboration Features
 **Goal**: Essential UX improvements for team collaboration and productivity
 
+**Important**: This phase focuses on **backend implementation** (Medusa). The frontend (Next.js) will consume these APIs:
+- **Backend (Medusa)**: Data models, API routes, workflows, event subscribers, business logic
+- **Frontend (Next.js)**: UI components, user interactions, real-time updates, visual design
+
+The backend provides the infrastructure; the frontend provides the user experience.
+
 #### 4.5.1 Activity Feed & Timeline
 1. **Activity Module** (team-scoped event logging)
    - Create Activity model:
@@ -794,13 +800,29 @@ apps/medusa/src/
    - Filter by tags in list views (Medusa UI Select with multi-select)
    - Click tag to see all entities with that tag
 
-#### 4.5.5 Bulk Operations
-1. **Bulk Workflows** (batch processing)
+#### 4.5.5 Bulk Operations with Personalization
+1. **Bulk Workflows** (batch processing with template interpolation)
    - `bulk-send-portfolio-workflow.ts`:
-     - Accept portfolio_id + array of contact_ids
-     - Send portfolio to multiple contacts at once
-     - Track progress (X of Y sent)
-     - Return summary: sent_count, failed_count, errors
+     - Accept: portfolio_id, contact_ids[], subject_template, message_template
+     - **Template Variables** (interpolated per contact):
+       - `{{contact.first_name}}` - "John"
+       - `{{contact.last_name}}` - "Doe"
+       - `{{contact.email}}` - "john@acme.com"
+       - `{{contact.job_title}}` - "CTO"
+       - `{{company.name}}` - "Acme Corp"
+       - `{{company.industry}}` - "Technology"
+       - `{{sender.name}}` - "Jane Smith" (sending user)
+       - `{{team.name}}` - "Digital Agency ABC"
+     - **Example Usage**:
+       - Subject: `Portfolio for {{company.name}} - {{contact.first_name}}`
+       - Message: `Hi {{contact.first_name}}, I thought you'd be interested in these projects relevant to {{company.industry}}...`
+     - **Processing**:
+       - Iterate through each contact
+       - Interpolate variables for that specific contact
+       - Generate personalized email HTML
+       - Send via existing send-portfolio workflow
+       - Track progress (X of Y sent)
+     - Return summary: sent_count, failed_count, errors with contact details
 
    - `bulk-tag-entities-workflow.ts`:
      - Accept entity_type, entity_ids[], tag_ids[]
@@ -812,18 +834,81 @@ apps/medusa/src/
      - Soft delete multiple entities
      - Verify all belong to team (security check)
 
-2. **API Routes**
-   - `POST /admin/portfolios/bulk-send` - Send portfolio to multiple contacts
+2. **Template System Enhancement**
+   - Update EmailTemplate model (from Phase 4) to support variables:
+     - `subject_template` - e.g., "Portfolio for {{company.name}}"
+     - `message_template` - rich text with variable placeholders
+     - `available_variables` - JSON array of supported variables
+   - Create template preview API:
+     - `POST /admin/templates/preview` - Preview with sample data
+     - Shows how email will look with interpolated values
+   - Variable validation:
+     - Ensure all variables in template are valid
+     - Warn if using variables not available for entity type
+
+3. **API Routes**
+   - `POST /admin/portfolios/bulk-send` - Send portfolio to multiple contacts with personalization
+     ```json
+     {
+       "portfolio_id": "port_123",
+       "contact_ids": ["cont_1", "cont_2", "cont_3"],
+       "subject_template": "Portfolio for {{company.name}}",
+       "message_template": "Hi {{contact.first_name}}, I thought you'd be interested in these {{company.industry}} projects...",
+       "use_template_id": "tmpl_456" // Optional: use saved template
+     }
+     ```
    - `POST /admin/{entity_type}/bulk-tag` - Add/remove tags from multiple entities
    - `DELETE /admin/{entity_type}/bulk-delete` - Delete multiple entities
    - `POST /admin/{entity_type}/bulk-export` - Export multiple entities to CSV
+   - `POST /admin/templates/preview` - Preview template with sample contact data
 
-3. **Admin UI** (Bulk Actions)
-   - Checkbox selection in all list views (Medusa UI Table supports this)
-   - Bulk action toolbar appears when items selected
-   - Actions: Send, Tag, Delete, Export
-   - Progress modal for long operations (Medusa UI Modal with Progress)
-   - Success/error summary after completion
+4. **Admin UI** (Bulk Actions with Template Editor)
+   - **Contact Selection**:
+     - Checkbox selection in contacts list (Medusa UI Table)
+     - Show count: "23 contacts selected"
+     - Filter before selecting (e.g., select all contacts from "Technology" industry)
+
+   - **Bulk Send Modal**:
+     - Select portfolio from dropdown
+     - **Template Editor** (Medusa UI Textarea with rich text):
+       - Subject field with variable insertion buttons
+       - Message field with variable insertion buttons
+       - Variable picker dropdown: `{{contact.first_name}}`, `{{company.name}}`, etc.
+       - Click variable to insert at cursor position
+     - **Preview Panel**:
+       - Select sample contact to preview
+       - Shows rendered email with real contact data
+       - Preview updates as you type
+     - **Saved Templates**:
+       - Dropdown to load saved template
+       - "Save as template" button for reuse
+
+   - **Progress Tracking**:
+     - Progress modal for long operations (Medusa UI Modal with Progress)
+     - Shows: "Sending 23/50 emails..."
+     - Real-time updates as emails send
+     - Cancel button to stop remaining sends
+
+   - **Results Summary**:
+     - Success/error summary after completion
+     - List of failed sends with reasons
+     - Option to retry failed sends
+
+5. **Backend Implementation Notes**
+   - **Variable Interpolation Function**:
+     ```typescript
+     function interpolateTemplate(template: string, contact: Contact): string {
+       return template
+         .replace(/\{\{contact\.first_name\}\}/g, contact.first_name)
+         .replace(/\{\{contact\.last_name\}\}/g, contact.last_name)
+         .replace(/\{\{company\.name\}\}/g, contact.company?.name || '')
+         // ... etc
+     }
+     ```
+   - **Security**: Sanitize interpolated values to prevent XSS
+   - **Performance**: Process in batches (10-20 emails at a time)
+   - **Error Handling**: Continue on individual failures, collect errors
+   - **Tracking**: Each email gets unique tracking_id for analytics
 
 **✅ Commit**: `git commit -m "feat: phase 4.5 - activity feed, notifications, search, tags, bulk operations"`
 
