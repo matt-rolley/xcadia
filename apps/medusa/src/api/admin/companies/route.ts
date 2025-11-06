@@ -2,23 +2,26 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import CompanyModuleService from "@/modules/company/service"
 import { COMPANY_MODULE } from "@/modules/company"
 import { createCompanyWorkflow } from "@/workflows/company/create-company"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
-// GET /admin/companies - List all companies (filtered by team)
+// GET /admin/companies - List all companies with linked data (filtered by team)
 export async function GET(
   req: MedusaRequest,
   res: MedusaResponse
 ): Promise<void> {
-  const companyModuleService: CompanyModuleService = req.scope.resolve(COMPANY_MODULE)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const teamId = (req as any).team_id
 
-  // Filter companies by team_id for multi-tenancy
-  const companies = await companyModuleService.listCompanies({
+  const { data: companies } = await query.graph({
+    entity: "company",
+    fields: [
+      "*",
+      "contacts.*",
+    ],
     filters: teamId ? { team_id: teamId } : {},
   })
 
-  res.json({
-    companies: Array.isArray(companies) ? companies : [companies],
-  })
+  res.json({ companies })
 }
 
 // POST /admin/companies - Create a new company

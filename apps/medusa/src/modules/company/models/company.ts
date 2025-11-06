@@ -1,4 +1,5 @@
 import { model } from "@medusajs/framework/utils"
+import Contact from "./contact"
 
 const Company = model.define("company", {
   id: model.id().primaryKey(),
@@ -13,6 +14,11 @@ const Company = model.define("company", {
   country: model.text().nullable(),
   postal_code: model.text().nullable(),
   notes: model.text().nullable(),
+
+  // One-to-many relationship with Contact
+  contacts: model.hasMany(() => Contact, {
+    mappedBy: "company",
+  }),
 })
 
 export default Company

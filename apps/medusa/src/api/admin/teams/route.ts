@@ -2,19 +2,21 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import TeamModuleService from "@/modules/team/service"
 import { TEAM_MODULE } from "@/modules/team"
 import { createTeamWorkflow } from "@/workflows/team/create-team"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
-// GET /admin/teams - List all teams
+// GET /admin/teams - List all teams with linked data
 export async function GET(
   req: MedusaRequest,
   res: MedusaResponse
 ): Promise<void> {
-  const teamModuleService: TeamModuleService = req.scope.resolve(TEAM_MODULE)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
 
-  const teams = await teamModuleService.listTeams()
-
-  res.json({
-    teams,
+  const { data: teams } = await query.graph({
+    entity: "team",
+    fields: ["*"],
   })
+
+  res.json({ teams })
 }
 
 // POST /admin/teams - Create a new team

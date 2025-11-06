@@ -34,7 +34,8 @@
     "@medusajs/medusa": "2.11.3",
     "@medusajs/types": "^2.11.3",
     "@medusajs/ui": "^4.0.27",
-    "resend": "^6.4.1"
+    "resend": "^6.4.1",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@medusajs/test-utils": "2.11.3",
