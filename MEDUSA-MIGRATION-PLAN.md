@@ -656,6 +656,193 @@ apps/medusa/src/
 - Analytics use proper Query patterns to fetch cross-module data
 - Dashboard uses Medusa UI Charts/Metrics components
 
+### Phase 4.5: Core UX & Collaboration Features
+**Goal**: Essential UX improvements for team collaboration and productivity
+
+#### 4.5.1 Activity Feed & Timeline
+1. **Activity Module** (team-scoped event logging)
+   - Create Activity model:
+     - `team_id` - for multi-tenancy isolation
+     - `user_id` - who performed the action (FK → Medusa User)
+     - `entity_type` - enum: "project", "portfolio", "contact", "company", "deal"
+     - `entity_id` - ID of the affected entity
+     - `action` - enum: "created", "updated", "deleted", "sent", "viewed", "opened", "clicked"
+     - `metadata` - JSON (additional context: what changed, who received it, etc.)
+     - `occurred_at` - timestamp
+
+2. **Activity Subscribers** (react to all key events)
+   - Subscribe to Medusa Event Bus events:
+     - `project.created`, `project.updated`, `project.deleted`
+     - `portfolio.created`, `portfolio.sent`, `portfolio.viewed`
+     - `contact.created`, `company.created`, `deal.created`
+     - `email.opened`, `email.clicked`
+   - Create activity records automatically for all events
+   - Include actor (user_id) and context (metadata)
+
+3. **API Routes**
+   - `GET /admin/activity` - List activities for team (paginated, filterable)
+   - `GET /admin/activity/feed` - Real-time feed with filters (user, entity type, date range)
+   - Support filters: by user, by entity type, by date range, by action type
+
+4. **Admin UI** (Activity Feed Widget)
+   - Dashboard widget showing recent activities (Medusa UI Card + Timeline)
+   - Full activity page with filters (Medusa UI Table with filters)
+   - Format: "John sent Portfolio 'Tech Showcase' to Acme Corp" (5 minutes ago)
+   - Click activity to jump to entity detail page
+
+#### 4.5.2 In-App Notifications
+1. **Notification Module Extension**
+   - Create InAppNotification model:
+     - `team_id` - for multi-tenancy
+     - `user_id` - recipient (FK → Medusa User)
+     - `type` - enum: "portfolio_viewed", "deal_updated", "member_joined", "email_opened"
+     - `title` - e.g., "Portfolio viewed by Acme Corp"
+     - `message` - detailed message
+     - `entity_type` - e.g., "portfolio"
+     - `entity_id` - link to entity
+     - `read` - boolean
+     - `read_at` - timestamp
+     - `created_at` - timestamp
+
+2. **Notification Subscribers** (react to key events)
+   - Subscribe to events that require user notification:
+     - `portfolio.viewed` → Notify portfolio sender
+     - `email.opened` → Notify team members watching this portfolio
+     - `deal.updated` → Notify deal owner
+     - `team.member_invited` → Notify new member
+   - Create in-app notification + optionally send email digest
+
+3. **API Routes**
+   - `GET /admin/notifications` - List user's notifications (unread first)
+   - `PATCH /admin/notifications/:id/read` - Mark as read
+   - `POST /admin/notifications/read-all` - Mark all as read
+   - `DELETE /admin/notifications/:id` - Delete notification
+   - `GET /admin/notifications/unread-count` - Get unread count for badge
+
+4. **Admin UI** (Notification Center)
+   - Bell icon in navbar with unread badge (Medusa UI Badge)
+   - Dropdown showing recent notifications (Medusa UI Dropdown)
+   - Click notification to jump to entity + mark as read
+   - "Mark all as read" button
+   - Settings to configure notification preferences (future)
+
+5. **WebSocket Support** (optional, future enhancement)
+   - Real-time notifications without polling
+   - Use Socket.io or similar
+   - Emit events when notifications created
+   - Update UI in real-time
+
+#### 4.5.3 Global Search
+1. **Search Workflows** (cross-module search)
+   - `global-search-workflow.ts`:
+     - Search across multiple modules: Project, Portfolio, Contact, Company, Deal
+     - Use Medusa Query to search with filters
+     - Search fields: name, description, email, notes, metadata
+     - Return results grouped by entity type
+     - Limit results per type (10 per type max)
+
+2. **Search Indexing** (future optimization)
+   - Use PostgreSQL full-text search (tsvector)
+   - Create search indexes on text fields
+   - Use Medusa Index Module (future feature flag)
+   - Eventually migrate to Elasticsearch/Algolia for advanced search
+
+3. **API Routes**
+   - `GET /admin/search?q={query}&type={entity_types}` - Global search
+   - Support filters: entity type, date range, team_id (automatic)
+   - Return: `{ results: { projects: [...], portfolios: [...], contacts: [...] } }`
+
+4. **Admin UI** (Search Bar)
+   - Search bar in navbar (Medusa UI Input with search icon)
+   - Keyboard shortcut: Cmd+K or Ctrl+K
+   - Search results dropdown showing grouped results (Medusa UI Dropdown)
+   - Click result to navigate to entity detail page
+   - "See all results" link to full search page
+
+#### 4.5.4 Tags & Labels System
+1. **Tag Module** (flexible categorization)
+   - Create Tag model:
+     - `team_id` - for multi-tenancy
+     - `name` - e.g., "High Priority", "Tech Industry", "Q1 2025"
+     - `color` - hex color code for visual distinction
+     - `entity_types` - JSON array: which entities can use this tag
+     - `created_by` - user_id who created tag
+
+2. **Entity-Tag Links** (many-to-many relationships)
+   - Create module links:
+     - `project-tag.ts` → Project ↔ Tag
+     - `portfolio-tag.ts` → Portfolio ↔ Tag
+     - `contact-tag.ts` → Contact ↔ Tag
+     - `company-tag.ts` → Company ↔ Tag
+     - `deal-tag.ts` → Deal ↔ Tag
+   - Each entity can have multiple tags
+   - Each tag can be on multiple entities
+
+3. **API Routes**
+   - `GET /admin/tags` - List all tags for team
+   - `POST /admin/tags` - Create new tag
+   - `PATCH /admin/tags/:id` - Update tag (name, color)
+   - `DELETE /admin/tags/:id` - Delete tag (removes from all entities)
+   - `POST /admin/{entity_type}/:id/tags` - Add tags to entity
+   - `DELETE /admin/{entity_type}/:id/tags/:tag_id` - Remove tag from entity
+
+4. **Admin UI** (Tag Management)
+   - Tag management page in settings (Medusa UI Table)
+   - Create/edit tag modal (Medusa UI Modal with color picker)
+   - Tag pills on entity list/detail views (Medusa UI Badge)
+   - Multi-select tag input when creating/editing entities
+   - Filter by tags in list views (Medusa UI Select with multi-select)
+   - Click tag to see all entities with that tag
+
+#### 4.5.5 Bulk Operations
+1. **Bulk Workflows** (batch processing)
+   - `bulk-send-portfolio-workflow.ts`:
+     - Accept portfolio_id + array of contact_ids
+     - Send portfolio to multiple contacts at once
+     - Track progress (X of Y sent)
+     - Return summary: sent_count, failed_count, errors
+
+   - `bulk-tag-entities-workflow.ts`:
+     - Accept entity_type, entity_ids[], tag_ids[]
+     - Add/remove tags from multiple entities
+     - Batch update for performance
+
+   - `bulk-delete-workflow.ts`:
+     - Accept entity_type, entity_ids[]
+     - Soft delete multiple entities
+     - Verify all belong to team (security check)
+
+2. **API Routes**
+   - `POST /admin/portfolios/bulk-send` - Send portfolio to multiple contacts
+   - `POST /admin/{entity_type}/bulk-tag` - Add/remove tags from multiple entities
+   - `DELETE /admin/{entity_type}/bulk-delete` - Delete multiple entities
+   - `POST /admin/{entity_type}/bulk-export` - Export multiple entities to CSV
+
+3. **Admin UI** (Bulk Actions)
+   - Checkbox selection in all list views (Medusa UI Table supports this)
+   - Bulk action toolbar appears when items selected
+   - Actions: Send, Tag, Delete, Export
+   - Progress modal for long operations (Medusa UI Modal with Progress)
+   - Success/error summary after completion
+
+**✅ Commit**: `git commit -m "feat: phase 4.5 - activity feed, notifications, search, tags, bulk operations"`
+
+**Test Before Moving On**:
+- View activity feed showing recent team actions
+- Receive in-app notification when portfolio viewed
+- Search across projects, portfolios, contacts
+- Create tags and apply to multiple entities
+- Send portfolio to 10 contacts with bulk send
+- Bulk tag 20 projects
+
+**🔍 Review**: Spawn Medusa expert agent to verify:
+- Activity Module uses Event Bus subscribers (not manual logging)
+- Notifications use proper Medusa patterns
+- Search workflows use Query patterns efficiently
+- Tag module links are correctly defined
+- Bulk operations use workflows with proper rollback
+- All UI uses Medusa UI components
+
 ### Phase 5: Deal/Quote System
 **Goal**: Cost estimation and quoting
 
@@ -730,6 +917,231 @@ apps/medusa/src/
 - Team → Order link for subscriptions is correct
 - Billing UI properly checks user roles (owners only)
 - Usage dashboard uses Medusa UI Progress, Badges, Metrics
+
+### Phase 6.5: Security & Compliance
+**Goal**: Essential security features and GDPR compliance before public launch
+
+#### 6.5.1 Two-Factor Authentication (2FA)
+1. **2FA Implementation**
+   - Extend Medusa Auth Module with TOTP support
+   - Add fields to User or create UserSecurity model:
+     - `two_factor_enabled` - boolean
+     - `two_factor_secret` - encrypted TOTP secret
+     - `two_factor_backup_codes` - JSON array of hashed backup codes
+   - Use libraries: `speakeasy` for TOTP generation, `qrcode` for QR codes
+
+2. **2FA Workflows**
+   - `enable-2fa-workflow.ts`:
+     - Generate secret and QR code
+     - Verify first code before enabling
+     - Generate backup codes
+   - `verify-2fa-workflow.ts`:
+     - Validate TOTP code during login
+     - Support backup codes
+   - `disable-2fa-workflow.ts`:
+     - Require password confirmation
+     - Clear 2FA secret and backup codes
+
+3. **API Routes**
+   - `POST /admin/auth/2fa/setup` - Generate QR code and secret
+   - `POST /admin/auth/2fa/verify` - Verify code and enable 2FA
+   - `POST /admin/auth/2fa/disable` - Disable 2FA (requires password)
+   - `POST /admin/auth/2fa/backup-codes` - Regenerate backup codes
+   - Modify login flow to check 2FA status after password
+
+4. **Admin UI** (2FA Setup)
+   - Security settings page (Medusa UI Card)
+   - QR code display for setup (Medusa UI Modal)
+   - Backup codes display and download (Medusa UI Code)
+   - 2FA enforcement toggle for team owners (all members must use 2FA)
+
+#### 6.5.2 Rate Limiting
+1. **Rate Limiting Middleware**
+   - Use Medusa Cloud's Redis for rate limit storage
+   - Store request counts: `rate_limit:{team_id}:{endpoint}:{window}`
+   - Sliding window rate limiting algorithm
+   - Different limits per endpoint type:
+     - Admin API: 1000 requests/hour per team
+     - Public API: 100 requests/hour per IP
+     - Email sending: 100 emails/day (Free), 1000/day (Pro)
+
+2. **Rate Limit Configuration**
+   - Create RateLimitConfig in medusa-config.ts:
+     - `/admin/*`: 1000/hour per team
+     - `/store/*`: 100/hour per IP
+     - `/admin/import/*`: 10/hour per team (expensive operations)
+     - `/admin/portfolios/*/send`: 100/day per team
+
+3. **API Response**
+   - Return `429 Too Many Requests` when limit exceeded
+   - Headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+   - Body: `{ error: "Rate limit exceeded", retry_after: 3600 }`
+
+4. **Admin UI** (Rate Limit Dashboard)
+   - Show current usage vs limits (Medusa UI Progress)
+   - Warning when approaching limits (80%+)
+   - Upgrade prompt for teams hitting limits
+
+#### 6.5.3 GDPR Compliance
+1. **Data Export Workflow**
+   - `gdpr-export-workflow.ts`:
+     - Create export job with status tracking
+     - Collect all team data: projects, portfolios, contacts, companies, deals, files, emails
+     - Generate JSON exports for each entity type
+     - Create ZIP file with all exports
+     - Upload ZIP to temporary storage (expires in 7 days)
+     - Email download link to requester
+     - Track: `team_id`, `requested_by`, `status`, `download_url`, `expires_at`
+
+2. **Data Deletion Workflow**
+   - `gdpr-delete-workflow.ts`:
+     - Soft delete team (set `deleted_at` timestamp)
+     - Send confirmation email with "Undo" link (30-day grace period)
+     - After grace period, hard delete:
+       - Delete all team data (projects, portfolios, contacts, etc.)
+       - Delete all files from storage (Tigris/S3)
+       - Anonymize audit logs (replace identifiers with "DELETED")
+       - Remove team members (unlink users from team)
+     - Cannot be undone after hard delete
+
+3. **Consent Management**
+   - Create Consent model:
+     - `contact_id` - for external contacts receiving portfolios
+     - `consent_type` - enum: "email_tracking", "analytics", "marketing"
+     - `given` - boolean
+     - `timestamp` - when consent given/withdrawn
+     - `ip_address` - proof of consent
+     - `user_agent` - browser info
+   - Respect "Do Not Track" header for email tracking pixels
+   - Unsubscribe link in all portfolio emails
+
+4. **API Routes**
+   - `POST /admin/gdpr/export` - Request data export
+   - `GET /admin/gdpr/export/status/:job_id` - Check export status
+   - `POST /admin/gdpr/delete` - Request account deletion
+   - `POST /admin/gdpr/delete/cancel` - Cancel deletion (within 30 days)
+   - `GET /admin/gdpr/consent/:contact_id` - View contact consent status
+   - `PATCH /admin/gdpr/consent/:contact_id` - Update consent preferences
+
+5. **Admin UI** (GDPR Tools)
+   - Data export page with download button (Medusa UI Button)
+   - Account deletion page with confirmation steps (Medusa UI Modal)
+   - Consent management in contact detail page (Medusa UI Toggle)
+   - Privacy dashboard showing data collected (Medusa UI Card)
+
+#### 6.5.4 Session Management
+1. **Session Tracking**
+   - Create Session model:
+     - `user_id` - FK → Medusa User
+     - `token_hash` - hashed JWT token (for revocation)
+     - `device` - parsed from user agent (e.g., "Chrome on macOS")
+     - `ip_address` - request IP
+     - `last_activity` - timestamp
+     - `created_at` - login time
+     - `expires_at` - session expiry
+   - Track all active sessions per user
+   - Update `last_activity` on each request (throttled to 1/minute)
+
+2. **Session Management Workflows**
+   - `revoke-session-workflow.ts`:
+     - Mark session as revoked
+     - Invalidate JWT token
+     - Force re-login on next request
+   - `revoke-all-sessions-workflow.ts`:
+     - Revoke all sessions except current
+     - Send email notification
+
+3. **API Routes**
+   - `GET /admin/sessions` - List user's active sessions
+   - `DELETE /admin/sessions/:id` - Revoke specific session
+   - `POST /admin/sessions/revoke-all` - Revoke all other sessions
+   - `GET /admin/sessions/current` - Get current session info
+
+4. **Admin UI** (Session Management)
+   - Active sessions list in account settings (Medusa UI Table)
+   - Show: Device, Location (IP), Last active, Login time
+   - Current session highlighted with badge
+   - Revoke buttons for each session
+   - "Log out all other devices" button
+
+#### 6.5.5 Enhanced Audit Logging
+1. **Audit Log Enhancements**
+   - Add to existing AuditLog model:
+     - `ip_address` - request IP for security tracking
+     - `user_agent` - browser/device info
+     - `before_data` - JSON (entity state before change)
+     - `after_data` - JSON (entity state after change)
+     - `risk_level` - enum: "low", "medium", "high" (e.g., deletion is high risk)
+   - Subscribe to ALL Medusa events for comprehensive logging
+
+2. **Audit Log Retention**
+   - Default retention: 90 days
+   - Enterprise retention: 365 days
+   - Scheduled job to delete expired logs
+   - Export audit logs before deletion (compliance)
+
+3. **API Routes**
+   - `GET /admin/audit-logs` - List logs with advanced filters
+   - `GET /admin/audit-logs/:id` - Get detailed log with before/after
+   - `POST /admin/audit-logs/export` - Export to CSV (GDPR compliance)
+   - Filters: user, entity, action, risk level, date range
+
+4. **Admin UI** (Audit Log Viewer)
+   - Audit log page with filters (Medusa UI Table)
+   - Diff view showing before/after changes (Medusa UI Code)
+   - Search by entity ID, user, or action
+   - Export button for CSV download
+   - Highlight high-risk actions (red badge)
+
+#### 6.5.6 Security Policies
+1. **Terms of Service & Privacy Policy Acceptance**
+   - Create Policy model:
+     - `version` - e.g., "1.0", "2.0"
+     - `type` - enum: "terms", "privacy"
+     - `content_url` - link to policy document
+     - `effective_date` - when policy takes effect
+   - Create PolicyAcceptance model:
+     - `user_id` - who accepted
+     - `policy_id` - which policy
+     - `accepted_at` - timestamp
+     - `ip_address` - proof of acceptance
+     - `user_agent` - browser info
+
+2. **Policy Acceptance Workflow**
+   - Force acceptance on first login
+   - Force re-acceptance when policy updated
+   - Block access until policy accepted
+   - Store IP address and user agent (legal proof)
+
+3. **API Routes**
+   - `GET /admin/policies/current` - Get current active policies
+   - `POST /admin/policies/:id/accept` - Accept policy
+   - `GET /admin/policies/history` - View user's acceptance history
+
+4. **Admin UI** (Policy Acceptance)
+   - Modal blocking access until accepted (Medusa UI Modal)
+   - Checkbox: "I agree to the Terms of Service and Privacy Policy"
+   - Links to read full policies
+   - Cannot close modal without accepting
+
+**✅ Commit**: `git commit -m "feat: phase 6.5 - security and compliance (2FA, GDPR, rate limiting)"`
+
+**Test Before Moving On**:
+- Enable 2FA and test login with TOTP app
+- Test rate limiting by hitting API repeatedly
+- Request GDPR data export and verify ZIP download
+- Initiate account deletion and verify 30-day grace period
+- View active sessions and revoke one
+- Check audit logs show before/after changes
+- Accept updated Terms of Service
+
+**🔍 Review**: Spawn Medusa expert agent to verify:
+- 2FA implementation is secure (secrets properly encrypted)
+- Rate limiting uses Redis efficiently
+- GDPR workflows properly export all data
+- Session tracking doesn't impact performance
+- Audit logs capture all critical events
+- Policy acceptance is legally sound
 
 **🎉 Final Commit**: `git commit -m "feat: xcadia medusa v2 migration complete"`
 
@@ -1256,11 +1668,13 @@ Marketing Campaign,Fashion Brand X,retainer,negotiation,6-month retainer,30000,U
 4. ✅ **Phase 2 Complete** - CRM Foundation (Company + Contact)
 5. ✅ **Phase 3 Complete** - Portfolio System
 6. ✅ **Phase 4 Complete** - Email & Tracking System
-7. **Continue with Phase 5** - Deal/Quote System
-8. **Then Phase 6** - Usage & Subscription
-9. **Future: Phase 7** - Integrations & Analytics (Google OAuth, Segment/PostHog, Zapier webhooks)
-10. **Future: Phase 8** - CSV Import & Custom Email Domains (data migration, Resend custom domains)
-11. **Follow Medusa UI guidelines** - Use only Medusa UI components for admin
+7. **Next: Phase 4.5** - Core UX & Collaboration (Activity Feed, Notifications, Search, Tags, Bulk Operations)
+8. **Then: Phase 5** - Deal/Quote System
+9. **Then: Phase 6** - Usage & Subscription
+10. **Before Launch: Phase 6.5** - Security & Compliance (2FA, GDPR, Rate Limiting, Session Management)
+11. **Future: Phase 7** - Integrations & Analytics (Google OAuth, Segment/PostHog, Zapier webhooks)
+12. **Future: Phase 8** - CSV Import & Custom Email Domains (data migration, Resend custom domains)
+13. **Always: Follow Medusa UI guidelines** - Use only Medusa UI components for admin
 
 ---
 
