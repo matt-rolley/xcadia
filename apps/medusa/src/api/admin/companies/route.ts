@@ -3,6 +3,7 @@ import CompanyModuleService from "@/modules/company/service"
 import { COMPANY_MODULE } from "@/modules/company"
 import { createCompanyWorkflow } from "@/workflows/company/create-company"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { PostAdminCreateCompany } from "./validators"
 
 // GET /admin/companies - List all companies with linked data (filtered by team)
 export async function GET(
@@ -29,55 +30,22 @@ export async function POST(
   req: MedusaRequest,
   res: MedusaResponse
 ): Promise<void> {
-  const {
-    team_id,
-    name,
-    website,
-    phone,
-    email,
-    address,
-    city,
-    state,
-    country,
-    postal_code,
-    notes,
-  } = req.body as {
-    team_id: string
-    name: string
-    website?: string
-    phone?: string
-    email?: string
-    address?: string
-    city?: string
-    state?: string
-    country?: string
-    postal_code?: string
-    notes?: string
-  }
+  // Validate input with Zod
+  const validation = PostAdminCreateCompany.safeParse(req.body)
 
-  // Validate input
-  if (!team_id || !name) {
+  if (!validation.success) {
     res.status(400).json({
-      error: "Missing required fields: team_id, name",
+      error: "Validation failed",
+      details: validation.error.issues,
     })
     return
   }
 
+  const data = validation.data
+
   // Execute workflow to create company
   const { result } = await createCompanyWorkflow(req.scope).run({
-    input: {
-      team_id,
-      name,
-      website,
-      phone,
-      email,
-      address,
-      city,
-      state,
-      country,
-      postal_code,
-      notes,
-    },
+    input: data,
   })
 
   res.status(201).json({

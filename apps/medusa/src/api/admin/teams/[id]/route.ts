@@ -2,6 +2,7 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import TeamModuleService from "@/modules/team/service"
 import { TEAM_MODULE } from "@/modules/team"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { PatchAdminUpdateTeam } from "@/api/admin/teams/validators"
 
 // GET /admin/teams/:id - Get a single team with linked data
 export async function GET(
@@ -36,7 +37,19 @@ export async function PATCH(
 ): Promise<void> {
   const { id } = req.params
   const teamModuleService: TeamModuleService = req.scope.resolve(TEAM_MODULE)
-  const data = req.body as any
+
+  // Validate input with Zod
+  const validation = PatchAdminUpdateTeam.safeParse(req.body)
+
+  if (!validation.success) {
+    res.status(400).json({
+      error: "Validation failed",
+      details: validation.error.issues,
+    })
+    return
+  }
+
+  const data = validation.data
 
   try {
     const team = await teamModuleService.updateTeams({

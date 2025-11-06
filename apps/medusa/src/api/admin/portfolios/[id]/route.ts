@@ -2,6 +2,7 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import PortfolioModuleService from "@/modules/portfolio/service"
 import { PORTFOLIO_MODULE } from "@/modules/portfolio"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { PatchAdminUpdatePortfolio } from "@/api/admin/portfolios/validators"
 
 // GET /admin/portfolios/:id - Get a single portfolio with linked data
 export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void> {
@@ -34,7 +35,19 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
 export async function PATCH(req: MedusaRequest, res: MedusaResponse): Promise<void> {
   const { id } = req.params
   const portfolioModuleService: PortfolioModuleService = req.scope.resolve(PORTFOLIO_MODULE)
-  const { password, expires_at, ...data } = req.body as any
+
+  // Validate input with Zod
+  const validation = PatchAdminUpdatePortfolio.safeParse(req.body)
+
+  if (!validation.success) {
+    res.status(400).json({
+      error: "Validation failed",
+      details: validation.error.issues,
+    })
+    return
+  }
+
+  const { password, expires_at, ...data } = validation.data
 
   try {
     const portfolio = await portfolioModuleService.updatePortfolioes({

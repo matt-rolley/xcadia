@@ -3,6 +3,7 @@ import PortfolioModuleService from "@/modules/portfolio/service"
 import { PORTFOLIO_MODULE } from "@/modules/portfolio"
 import { createPortfolioWorkflow } from "@/workflows/portfolio/create-portfolio"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { PostAdminCreatePortfolio } from "./validators"
 
 // GET /admin/portfolios - List all portfolios with linked data (filtered by team)
 export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void> {
@@ -24,19 +25,22 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
 
 // POST /admin/portfolios - Create a new portfolio
 export async function POST(req: MedusaRequest, res: MedusaResponse): Promise<void> {
-  const { team_id, title, slug, password, expires_at, ...rest } = req.body as any
+  // Validate input with Zod
+  const validation = PostAdminCreatePortfolio.safeParse(req.body)
 
-  if (!team_id || !title || !slug) {
-    res.status(400).json({ error: "Missing required fields: team_id, title, slug" })
+  if (!validation.success) {
+    res.status(400).json({
+      error: "Validation failed",
+      details: validation.error.issues,
+    })
     return
   }
 
+  const { password, expires_at, ...data } = validation.data
+
   const { result } = await createPortfolioWorkflow(req.scope).run({
     input: {
-      team_id,
-      title,
-      slug,
-      ...rest,
+      ...data,
       password_hash: password || undefined,
       expires_at: expires_at ? new Date(expires_at) : undefined,
     },

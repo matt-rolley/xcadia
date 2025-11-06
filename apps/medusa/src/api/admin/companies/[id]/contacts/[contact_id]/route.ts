@@ -1,6 +1,7 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import CompanyModuleService from "@/modules/company/service"
 import { COMPANY_MODULE } from "@/modules/company"
+import { PatchAdminUpdateContact } from "@/api/admin/companies/validators"
 
 // GET /admin/companies/:id/contacts/:contact_id - Get a single contact
 export async function GET(
@@ -25,7 +26,19 @@ export async function PATCH(
 ): Promise<void> {
   const { contact_id } = req.params
   const companyModuleService: CompanyModuleService = req.scope.resolve(COMPANY_MODULE)
-  const data = req.validatedBody as Record<string, any>
+
+  // Validate input with Zod
+  const validation = PatchAdminUpdateContact.safeParse(req.body)
+
+  if (!validation.success) {
+    res.status(400).json({
+      error: "Validation failed",
+      details: validation.error.issues,
+    })
+    return
+  }
+
+  const data = validation.data
 
   try {
     const contact = await companyModuleService.updateContacts({

@@ -2,6 +2,7 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import CompanyModuleService from "@/modules/company/service"
 import { COMPANY_MODULE } from "@/modules/company"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { PatchAdminUpdateCompany } from "@/api/admin/companies/validators"
 
 // GET /admin/companies/:id - Get a single company with linked data
 export async function GET(
@@ -40,7 +41,19 @@ export async function PATCH(
   const { id } = req.params
   const teamId = (req as any).team_id
   const companyModuleService: CompanyModuleService = req.scope.resolve(COMPANY_MODULE)
-  const data = req.validatedBody as Record<string, any>
+
+  // Validate input with Zod
+  const validation = PatchAdminUpdateCompany.safeParse(req.body)
+
+  if (!validation.success) {
+    res.status(400).json({
+      error: "Validation failed",
+      details: validation.error.issues,
+    })
+    return
+  }
+
+  const data = validation.data
 
   try {
     // First, verify the company belongs to the user's team
