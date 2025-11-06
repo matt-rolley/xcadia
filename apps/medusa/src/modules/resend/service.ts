@@ -29,6 +29,7 @@ enum Templates {
   TEAM_MEMBER_INVITED = "team-member-invited",
   TEAM_MEMBER_JOINED = "team-member-joined",
   CONTACT_CREATED = "contact-created",
+  PORTFOLIO_SEND = "portfolio-send",
 }
 
 class ResendNotificationProviderService extends AbstractNotificationProviderService {
@@ -50,9 +51,13 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
   async send(
     notification: ProviderSendNotificationDTO
   ): Promise<ProviderSendNotificationResultsDTO> {
+    // Allow custom HTML to be passed via notification.data for portfolio emails
+    const customHtml = notification.data?.html
+    const customSubject = notification.data?.subject
+
     const template = this.getTemplate(notification.template as Templates)
 
-    if (!template) {
+    if (!template && !customHtml) {
       this.logger.error(`Couldn't find an email template for ${notification.template}. The valid options are ${Object.values(Templates)}`)
       return {}
     }
@@ -60,20 +65,30 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
     const commonOptions = {
       from: this.options.from,
       to: [notification.to],
-      subject: this.getTemplateSubject(notification.template as Templates),
+      subject: customSubject || this.getTemplateSubject(notification.template as Templates),
     }
 
     let emailOptions: CreateEmailOptions
-    if (typeof template === "string") {
+
+    // Use custom HTML if provided (for portfolio emails)
+    if (customHtml) {
+      emailOptions = {
+        ...commonOptions,
+        html: customHtml,
+      }
+    } else if (typeof template === "string") {
       emailOptions = {
         ...commonOptions,
         html: template,
       }
-    } else {
+    } else if (template) {
       emailOptions = {
         ...commonOptions,
         react: template(notification.data),
       }
+    } else {
+      this.logger.error("No valid template or HTML content found")
+      return {}
     }
 
     const { data, error } = await this.resendClient.emails.send(emailOptions)
@@ -114,6 +129,9 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
           <h1>New Contact Created</h1>
           <p>A new contact has been added: ${data.email}</p>
         `
+      case Templates.PORTFOLIO_SEND:
+        // Portfolio emails use custom HTML passed via notification.data
+        return undefined
       default:
         return undefined
     }
@@ -133,6 +151,8 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
         return "Welcome to the team!"
       case Templates.CONTACT_CREATED:
         return "New Contact Created"
+      case Templates.PORTFOLIO_SEND:
+        return "Portfolio: Curated Deals for You"
       default:
         return "Notification from Xcadia"
     }
