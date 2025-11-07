@@ -834,54 +834,186 @@ The backend provides the infrastructure; the frontend provides the user experien
      - Soft delete multiple entities
      - Verify all belong to team (security check)
 
-2. **Template System Enhancement**
+2. **Template System Enhancement with AI Generation**
    - Update EmailTemplate model (from Phase 4) to support variables:
      - `subject_template` - e.g., "Portfolio for {{company.name}}"
      - `message_template` - rich text with variable placeholders
      - `available_variables` - JSON array of supported variables
-   - Create template preview API:
+     - `tone` - enum: "professional", "casual", "friendly", "formal"
+     - `purpose` - enum: "cold_outreach", "follow_up", "introduction", "update"
+     - `ai_generated` - boolean flag to track AI-generated templates
+     - `usage_count` - track how often template is used (for learning)
+
+   - **AI Template Generation Workflow**:
+     - `generate-template-workflow.ts`:
+       - **Input**: purpose (e.g., "cold_outreach"), target_industry (optional), tone (optional)
+       - **Process**:
+         1. Fetch all existing team templates (to learn writing style)
+         2. Analyze templates for:
+            - Tone and sentiment (professional, friendly, casual, formal)
+            - Average length and structure
+            - Common phrases and vocabulary
+            - Greeting/closing patterns
+            - Call-to-action style
+         3. Call AI API (OpenAI/Anthropic Claude) with prompt:
+            ```
+            You are helping generate email templates for [Team Name].
+
+            Analyze these existing templates to learn their writing style:
+            [Include 5-10 most used templates]
+
+            Common characteristics:
+            - Tone: [detected tone]
+            - Avg length: [X words]
+            - Common phrases: [list]
+
+            Generate a new email template for: [purpose]
+            Target industry: [industry]
+            Desired tone: [tone]
+
+            Requirements:
+            - Match the writing style and tone of existing templates
+            - Use template variables: {{contact.first_name}}, {{company.name}}, etc.
+            - Include clear call-to-action
+            - Keep it concise and personalized
+            - Subject line and body message
+            ```
+         4. Parse AI response (subject + message)
+         5. Validate template variables are correct
+         6. Return generated template for user review
+       - **Output**: { subject_template, message_template, suggested_name }
+
+   - **Style Learning System**:
+     - Analyze writing patterns from all team templates:
+       - Sentence length distribution
+       - Vocabulary complexity (Flesch-Kincaid readability)
+       - Punctuation style (exclamation marks, dashes, etc.)
+       - Paragraph structure
+       - Use of emojis (yes/no)
+       - Industry-specific terminology
+     - Store style profile in Team model:
+       - `writing_style` - JSON with analyzed characteristics
+       - `preferred_tone` - most commonly used tone
+       - `avg_template_length` - average word count
+     - Update style profile when templates are created/edited
+
+   - **Template Preview & Testing**:
      - `POST /admin/templates/preview` - Preview with sample data
      - Shows how email will look with interpolated values
-   - Variable validation:
+     - A/B testing support (future):
+       - Send variant A vs B to similar contacts
+       - Track open rates, click rates
+       - Recommend better performing templates
+
+   - **Variable Validation**:
      - Ensure all variables in template are valid
      - Warn if using variables not available for entity type
+     - Suggest corrections for typos: `{{contact.fist_name}}` → `{{contact.first_name}}`
 
 3. **API Routes**
-   - `POST /admin/portfolios/bulk-send` - Send portfolio to multiple contacts with personalization
-     ```json
-     {
-       "portfolio_id": "port_123",
-       "contact_ids": ["cont_1", "cont_2", "cont_3"],
-       "subject_template": "Portfolio for {{company.name}}",
-       "message_template": "Hi {{contact.first_name}}, I thought you'd be interested in these {{company.industry}} projects...",
-       "use_template_id": "tmpl_456" // Optional: use saved template
-     }
-     ```
-   - `POST /admin/{entity_type}/bulk-tag` - Add/remove tags from multiple entities
-   - `DELETE /admin/{entity_type}/bulk-delete` - Delete multiple entities
-   - `POST /admin/{entity_type}/bulk-export` - Export multiple entities to CSV
-   - `POST /admin/templates/preview` - Preview template with sample contact data
+   - **AI Template Generation**:
+     - `POST /admin/templates/generate` - Generate AI template from existing templates
+       ```json
+       {
+         "purpose": "cold_outreach",
+         "target_industry": "Technology",
+         "tone": "professional",
+         "context": "Introducing our design services"
+       }
+       ```
+       Response:
+       ```json
+       {
+         "subject_template": "{{contact.first_name}}, check out our {{company.industry}} work",
+         "message_template": "Hi {{contact.first_name}},\n\nI noticed {{company.name}} is in the {{company.industry}} space...",
+         "suggested_name": "Tech Cold Outreach - Professional",
+         "confidence_score": 0.92
+       }
+       ```
+     - `GET /admin/templates/style-profile` - Get team's writing style analysis
+     - `POST /admin/templates/analyze` - Analyze a template's tone and style
 
-4. **Admin UI** (Bulk Actions with Template Editor)
+   - **Bulk Operations**:
+     - `POST /admin/portfolios/bulk-send` - Send portfolio to multiple contacts with personalization
+       ```json
+       {
+         "portfolio_id": "port_123",
+         "contact_ids": ["cont_1", "cont_2", "cont_3"],
+         "subject_template": "Portfolio for {{company.name}}",
+         "message_template": "Hi {{contact.first_name}}, I thought you'd be interested in these {{company.industry}} projects...",
+         "use_template_id": "tmpl_456" // Optional: use saved template
+       }
+       ```
+     - `POST /admin/{entity_type}/bulk-tag` - Add/remove tags from multiple entities
+     - `DELETE /admin/{entity_type}/bulk-delete` - Delete multiple entities
+     - `POST /admin/{entity_type}/bulk-export` - Export multiple entities to CSV
+
+   - **Template Management**:
+     - `GET /admin/templates` - List all team templates (sorted by usage_count)
+     - `POST /admin/templates` - Create new template
+     - `PATCH /admin/templates/:id` - Update template
+     - `DELETE /admin/templates/:id` - Delete template
+     - `POST /admin/templates/preview` - Preview template with sample contact data
+     - `GET /admin/templates/:id/performance` - Get template analytics (open rate, click rate)
+
+4. **Admin UI** (Bulk Actions with AI-Powered Template Editor)
+   - **Template Library Page**:
+     - List all saved templates (Medusa UI Table)
+     - Sort by: usage_count, created_at, performance (open rate)
+     - Filter by: purpose, tone, ai_generated
+     - **"Generate with AI" button** (Medusa UI Button with sparkle icon)
+     - Click template to edit or view analytics
+
+   - **AI Template Generator Modal**:
+     - **Step 1: Provide Context**
+       - Purpose dropdown: Cold Outreach, Follow-up, Introduction, Update
+       - Target industry (optional): Technology, Healthcare, Finance, etc.
+       - Tone selector: Professional, Casual, Friendly, Formal
+       - Additional context textarea: "Introducing our new design services"
+     - **Step 2: AI Generation**
+       - Loading state: "Analyzing your writing style..."
+       - Shows style profile: "Your templates are typically professional with 150 words avg"
+       - "Generate Template" button
+     - **Step 3: Review & Edit**
+       - Shows AI-generated subject and message
+       - Confidence score badge: "92% match to your style"
+       - Edit fields to refine
+       - Variable suggestions highlighted
+       - "Regenerate" button to try again
+       - "Save Template" or "Use Once"
+
    - **Contact Selection**:
      - Checkbox selection in contacts list (Medusa UI Table)
      - Show count: "23 contacts selected"
      - Filter before selecting (e.g., select all contacts from "Technology" industry)
+     - Smart suggestions: "These contacts haven't been emailed in 30 days"
 
    - **Bulk Send Modal**:
      - Select portfolio from dropdown
+     - **Template Selector**:
+       - Dropdown of saved templates (sorted by relevance)
+       - Each template shows: name, purpose, last used date, performance
+       - **"Generate with AI"** button to create new template on-the-fly
+       - "Start from scratch" option
      - **Template Editor** (Medusa UI Textarea with rich text):
        - Subject field with variable insertion buttons
        - Message field with variable insertion buttons
        - Variable picker dropdown: `{{contact.first_name}}`, `{{company.name}}`, etc.
        - Click variable to insert at cursor position
+       - **AI Writing Suggestions** (optional enhancement):
+         - "This subject line has a 15% lower open rate than similar ones"
+         - "Suggestion: Shorten by 10 words for better engagement"
      - **Preview Panel**:
        - Select sample contact to preview
        - Shows rendered email with real contact data
        - Preview updates as you type
+       - **Style Check**:
+         - Shows readability score
+         - Highlights potential issues (too long, no CTA, etc.)
      - **Saved Templates**:
        - Dropdown to load saved template
        - "Save as template" button for reuse
+       - Templates show usage count and performance
 
    - **Progress Tracking**:
      - Progress modal for long operations (Medusa UI Modal with Progress)
@@ -895,20 +1027,100 @@ The backend provides the infrastructure; the frontend provides the user experien
      - Option to retry failed sends
 
 5. **Backend Implementation Notes**
-   - **Variable Interpolation Function**:
+   - **AI Integration**:
+     - Use Anthropic Claude API or OpenAI GPT-4 for generation
+     - Store API keys in environment variables
+     - Cost optimization: Cache style analysis per team (regenerate monthly)
+     - Fallback: If AI service down, show manual template editor
+     - Rate limiting: 10 AI generations per hour per team (prevent abuse)
+
+   - **Style Analysis Algorithm**:
      ```typescript
-     function interpolateTemplate(template: string, contact: Contact): string {
-       return template
-         .replace(/\{\{contact\.first_name\}\}/g, contact.first_name)
-         .replace(/\{\{contact\.last_name\}\}/g, contact.last_name)
-         .replace(/\{\{company\.name\}\}/g, contact.company?.name || '')
-         // ... etc
+     function analyzeWritingStyle(templates: EmailTemplate[]) {
+       return {
+         avgLength: calculateAvgWordCount(templates),
+         tone: detectTone(templates), // professional, casual, friendly, formal
+         readability: calculateFleschScore(templates),
+         commonPhrases: extractFrequentPhrases(templates, minCount: 3),
+         sentenceLength: calculateAvgSentenceLength(templates),
+         punctuationStyle: analyzePunctuation(templates),
+         hasEmojis: templates.some(t => containsEmojis(t.message_template)),
+         ctaPatterns: extractCTAPatterns(templates),
+       }
      }
      ```
-   - **Security**: Sanitize interpolated values to prevent XSS
-   - **Performance**: Process in batches (10-20 emails at a time)
-   - **Error Handling**: Continue on individual failures, collect errors
-   - **Tracking**: Each email gets unique tracking_id for analytics
+
+   - **AI Prompt Construction**:
+     ```typescript
+     function buildPrompt(teamStyle: WritingStyle, input: GenerateInput) {
+       return `
+       You are an AI assistant helping to generate email templates.
+
+       Team Writing Style Profile:
+       - Average length: ${teamStyle.avgLength} words
+       - Tone: ${teamStyle.tone}
+       - Readability: ${teamStyle.readability} (Flesch score)
+       - Common phrases: ${teamStyle.commonPhrases.join(', ')}
+       - Has emojis: ${teamStyle.hasEmojis}
+
+       Example templates from this team:
+       ${getMostUsedTemplates(5).map(t => t.message_template).join('\n\n---\n\n')}
+
+       Task: Generate a new ${input.purpose} email template for ${input.target_industry} industry.
+       Desired tone: ${input.tone}
+       Additional context: ${input.context}
+
+       CRITICAL REQUIREMENTS:
+       1. Match the team's writing style closely
+       2. Use these template variables: {{contact.first_name}}, {{contact.last_name}}, {{company.name}}, {{company.industry}}, {{sender.name}}
+       3. Include a clear call-to-action
+       4. Keep similar length to team's average (${teamStyle.avgLength} words)
+       5. Do NOT use emojis unless team consistently uses them
+
+       Output format (JSON):
+       {
+         "subject": "subject line with variables",
+         "message": "email body with variables and proper formatting"
+       }
+       `
+     }
+     ```
+
+   - **Variable Interpolation Function**:
+     ```typescript
+     function interpolateTemplate(template: string, contact: Contact, sender: User, team: Team): string {
+       return template
+         .replace(/\{\{contact\.first_name\}\}/g, escapeHtml(contact.first_name))
+         .replace(/\{\{contact\.last_name\}\}/g, escapeHtml(contact.last_name))
+         .replace(/\{\{contact\.email\}\}/g, escapeHtml(contact.email))
+         .replace(/\{\{contact\.job_title\}\}/g, escapeHtml(contact.job_title || ''))
+         .replace(/\{\{company\.name\}\}/g, escapeHtml(contact.company?.name || ''))
+         .replace(/\{\{company\.industry\}\}/g, escapeHtml(contact.company?.industry || ''))
+         .replace(/\{\{sender\.name\}\}/g, escapeHtml(sender.name))
+         .replace(/\{\{team\.name\}\}/g, escapeHtml(team.name))
+     }
+     ```
+
+   - **Security**:
+     - Sanitize all interpolated values to prevent XSS
+     - Validate AI responses before storing (ensure no malicious code)
+     - Rate limit AI generations to prevent abuse
+
+   - **Performance**:
+     - Process emails in batches (10-20 at a time)
+     - Cache AI-generated templates for 24 hours
+     - Use Redis for style profile caching
+
+   - **Error Handling**:
+     - Continue on individual email failures, collect errors
+     - Retry AI generation if parsing fails (max 3 attempts)
+     - Fallback to manual editor if AI unavailable
+
+   - **Tracking**:
+     - Each email gets unique tracking_id for analytics
+     - Track template performance (open rate, click rate)
+     - Update usage_count when template used
+     - Store which templates were AI-generated for analysis
 
 **✅ Commit**: `git commit -m "feat: phase 4.5 - activity feed, notifications, search, tags, bulk operations"`
 
