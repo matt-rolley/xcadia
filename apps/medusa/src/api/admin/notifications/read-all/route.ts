@@ -8,29 +8,33 @@ export async function POST(req: MedusaRequest, res: MedusaResponse): Promise<voi
   const teamId = (req as any).team_id
 
   try {
-    // Get all unread notifications for user
+    // Get count of unread notifications for response
     const unreadNotifications = await notificationService.listInAppNotifications({
-      filters: {
-        team_id: teamId,
-        user_id: userId,
-        read: false,
-      },
+      team_id: teamId,
+      user_id: userId,
+      read: false,
     })
 
-    // Mark all as read
-    const updates = unreadNotifications.map((notification: any) =>
-      notificationService.updateInAppNotifications({
-        id: notification.id,
-        read: true,
-        read_at: new Date(),
-      })
-    )
+    const count = unreadNotifications.length
 
-    await Promise.all(updates)
+    // Bulk update all unread notifications
+    if (count > 0) {
+      await notificationService.updateInAppNotifications(
+        {
+          team_id: teamId,
+          user_id: userId,
+          read: false,
+        },
+        {
+          read: true,
+          read_at: new Date(),
+        }
+      )
+    }
 
     res.json({
-      message: `Marked ${unreadNotifications.length} notifications as read`,
-      count: unreadNotifications.length,
+      message: `Marked ${count} notifications as read`,
+      count,
     })
   } catch (error) {
     res.status(500).json({ error: "Failed to mark notifications as read" })

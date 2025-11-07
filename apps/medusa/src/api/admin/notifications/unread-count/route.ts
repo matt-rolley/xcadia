@@ -9,11 +9,9 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
 
   try {
     const unreadNotifications = await notificationService.listInAppNotifications({
-      filters: {
-        team_id: teamId,
-        user_id: userId,
-        read: false,
-      },
+      team_id: teamId,
+      user_id: userId,
+      read: false,
     })
 
     res.json({

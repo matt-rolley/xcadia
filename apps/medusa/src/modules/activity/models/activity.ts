@@ -2,8 +2,8 @@ import { model } from "@medusajs/framework/utils"
 
 const Activity = model.define("activity", {
   id: model.id().primaryKey(),
-  team_id: model.text(), // FK to team module
-  user_id: model.text().nullable(), // FK to Medusa User - nullable for system events
+  team_id: model.text().index(), // FK to team module - indexed for team filtering
+  user_id: model.text().nullable().index(), // FK to Medusa User - indexed for user filtering
   entity_type: model.enum([
     "project",
     "portfolio",
@@ -27,7 +27,7 @@ const Activity = model.define("activity", {
     "left",
   ]),
   metadata: model.json().nullable(), // Additional context: what changed, who received it, etc.
-  occurred_at: model.dateTime(),
+  occurred_at: model.dateTime().index(), // Indexed for time-based queries
 })
 
 export default Activity

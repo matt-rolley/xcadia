@@ -10,10 +10,8 @@ export async function PATCH(req: MedusaRequest, res: MedusaResponse): Promise<vo
   try {
     // Verify notification belongs to user
     const [notification] = await notificationService.listInAppNotifications({
-      filters: {
-        id: notificationId,
-        user_id: userId,
-      },
+      id: notificationId,
+      user_id: userId,
     })
 
     if (!notification) {
