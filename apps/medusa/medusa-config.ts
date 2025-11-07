@@ -27,6 +27,12 @@ module.exports = defineConfig({
       resolve: "./src/modules/email",
     },
     {
+      resolve: "./src/modules/activity",
+    },
+    {
+      resolve: "./src/modules/notification",
+    },
+    {
       resolve: "@medusajs/medusa/notification",
       options: {
         providers: [
@@ -40,6 +46,25 @@ module.exports = defineConfig({
             },
           },
         ],
+      },
+    },
+    {
+      resolve: "@medusajs/file-s3",
+      options: {
+        file_url: 'https://assets.xcadia.com', 
+        access_key_id: process.env.S3_ACCESS_KEY_ID,
+        secret_access_key: process.env.S3_SECRET_ACCESS_KEY,
+        region: 'auto',
+        bucket: 'xcadia',
+        // Optional: Configure CDN
+        // cdn_url: process.env.S3_CDN_URL, // e.g., CloudFront URL
+        // Optional: Set cache control headers
+        // cache_control: "max-age=31536000",
+        endpoint: 'https://t3.storage.dev',
+        additional_client_config: {
+          forcePathStyle: true,
+        },
+        
       },
     },
   ],
