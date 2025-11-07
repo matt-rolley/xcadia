@@ -67,6 +67,9 @@ module.exports = defineConfig({
     {
       resolve: "./src/modules/notification",
     },
+    // {
+    //   resolve: "./src/modules/deal",
+    // },
     {
       resolve: '@medusajs/medusa/payment',
       options: {

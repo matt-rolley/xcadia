@@ -133,5 +133,35 @@ export default defineMiddlewares({
       matcher: "/admin/projects*",
       middlewares: [teamContextMiddleware],
     },
+    // Protect admin search routes
+    {
+      matcher: "/admin/search*",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    // Inject team context for search routes
+    {
+      matcher: "/admin/search*",
+      middlewares: [teamContextMiddleware],
+    },
+    // Protect admin activity routes
+    {
+      matcher: "/admin/activity*",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    // Inject team context for activity routes
+    {
+      matcher: "/admin/activity*",
+      middlewares: [teamContextMiddleware],
+    },
+    // Protect admin notification routes
+    {
+      matcher: "/admin/notifications*",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    // Inject team context for notification routes
+    {
+      matcher: "/admin/notifications*",
+      middlewares: [teamContextMiddleware],
+    },
   ],
 })
