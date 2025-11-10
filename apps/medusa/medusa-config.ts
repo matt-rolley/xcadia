@@ -108,20 +108,27 @@ module.exports = defineConfig({
         ],
       },
     },
-    // {
-    //   resolve: "@medusajs/file-s3",
-    //   options: {
-    //     file_url: 'https://assets.xcadia.com', 
-    //     access_key_id: process.env.S3_ACCESS_KEY_ID,
-    //     secret_access_key: process.env.S3_SECRET_ACCESS_KEY,
-    //     region: 'auto',
-    //     bucket: 'xcadia',
-    //     endpoint: 'https://t3.storage.dev',
-    //     additional_client_config: {
-    //       forcePathStyle: true,
-    //     },
-        
-    //   },
-    // },
+    {
+      resolve: "@medusajs/medusa/file",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/medusa/file-s3",
+            id: "s3",
+            options: {
+              file_url: 'https://assets.xcadia.com',
+              access_key_id: process.env.S3_ACCESS_KEY_ID,
+              secret_access_key: process.env.S3_SECRET_ACCESS_KEY,
+              region: 'auto',
+              bucket: 'xcadia',
+              endpoint: 'https://t3.storage.dev',
+              additional_client_config: {
+                forcePathStyle: true,
+              },
+            },
+          },
+        ],
+      },
+    },
   ],
 })
