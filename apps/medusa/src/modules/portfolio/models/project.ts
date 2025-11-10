@@ -8,7 +8,6 @@ const Project = model.define("project", {
   title: model.text(),
   description: model.text().nullable(),
   category: model.text().nullable(), // e.g., "Web Design", "3D Modeling", "Photography"
-  tags: model.json().nullable(), // Array of tags for filtering
   is_featured: model.boolean().default(false),
   display_order: model.number().default(0), // For custom sorting
   metadata: model.json().nullable(), // Custom metadata (dimensions, duration, etc.)
