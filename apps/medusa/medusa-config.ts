@@ -87,6 +87,9 @@ module.exports = defineConfig({
       resolve: "./src/modules/usage",
     },
     {
+      resolve: "./src/modules/security",
+    },
+    {
       resolve: '@medusajs/medusa/payment',
       options: {
         providers: [
