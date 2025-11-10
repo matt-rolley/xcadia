@@ -96,6 +96,9 @@ module.exports = defineConfig({
       resolve: "./src/modules/webhook",
     },
     {
+      resolve: "./src/modules/email-domain",
+    },
+    {
       resolve: '@medusajs/medusa/payment',
       options: {
         providers: [
