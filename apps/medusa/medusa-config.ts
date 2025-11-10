@@ -90,6 +90,12 @@ module.exports = defineConfig({
       resolve: "./src/modules/security",
     },
     {
+      resolve: "./src/modules/analytics",
+    },
+    {
+      resolve: "./src/modules/webhook",
+    },
+    {
       resolve: '@medusajs/medusa/payment',
       options: {
         providers: [
