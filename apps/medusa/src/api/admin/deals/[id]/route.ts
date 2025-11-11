@@ -1,6 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { DEAL_MODULE } from "@/modules/deal"
-import { Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { z } from "zod"
 
 const UpdateDealSchema = z.object({
@@ -22,7 +22,7 @@ export async function GET(
 ): Promise<void> {
   const { id } = req.params
   const teamId = (req as any).team_id
-  const query = req.scope.resolve(Modules.QUERY)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
 
   try {
     // Fetch deal with related data

@@ -1,10 +1,9 @@
 import {
   createWorkflow,
   WorkflowResponse,
-  transform,
 } from "@medusajs/framework/workflows-sdk"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
-import { Modules } from "@medusajs/framework/utils"
+import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { EMAIL_MODULE } from "@/modules/email"
 
 type SendPortfolioInput = {
@@ -23,7 +22,7 @@ type SendPortfolioOutput = {
 const validatePortfolioStep = createStep(
   "validate-portfolio",
   async ({ portfolio_id, team_id }: { portfolio_id: string; team_id: string }, { container }) => {
-    const query = container.resolve(Modules.QUERY)
+    const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
     const { data: portfolios } = await query.graph({
       entity: "portfolio",
@@ -47,7 +46,7 @@ const validatePortfolioStep = createStep(
 const fetchPortfolioDataStep = createStep(
   "fetch-portfolio-data",
   async ({ portfolio_id }: { portfolio_id: string }, { container }) => {
-    const query = container.resolve(Modules.QUERY)
+    const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
     const { data: portfolios } = await query.graph({
       entity: "portfolio",
@@ -68,7 +67,7 @@ const fetchPortfolioDataStep = createStep(
 const fetchContactsStep = createStep(
   "fetch-contacts",
   async ({ contact_ids }: { contact_ids: string[] }, { container }) => {
-    const query = container.resolve(Modules.QUERY)
+    const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
     const { data: contacts } = await query.graph({
       entity: "contact",

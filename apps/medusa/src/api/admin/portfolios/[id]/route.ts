@@ -7,7 +7,13 @@ import { PatchAdminUpdatePortfolio } from "@/api/admin/portfolios/validators"
 // GET /admin/portfolios/:id - Get a single portfolio with linked data
 export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void> {
   const { id } = req.params
+  const team_id = req.auth_context?.team_id
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+
+  if (!team_id) {
+    res.status(403).json({ error: "Team context required" })
+    return
+  }
 
   try {
     const { data: portfolios } = await query.graph({
@@ -17,7 +23,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
         "projects.*",
         "projects.portfolios.display_order",
       ],
-      filters: { id },
+      filters: { id, team_id },
     })
 
     if (!portfolios || portfolios.length === 0) {

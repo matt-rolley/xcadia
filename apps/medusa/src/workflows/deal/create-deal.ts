@@ -3,7 +3,7 @@ import {
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
-import { Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { DEAL_MODULE } from "@/modules/deal"
 
 type CreateDealInput = {
@@ -31,7 +31,7 @@ type CreateDealOutput = {
 const validateCompanyStep = createStep(
   "validate-company",
   async ({ company_id, team_id }: { company_id: string; team_id: string }, { container }) => {
-    const query = container.resolve(Modules.QUERY)
+    const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
     const { data: companies } = await query.graph({
       entity: "company",
