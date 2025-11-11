@@ -3,6 +3,7 @@ import PortfolioModuleService from "@/modules/portfolio/service"
 import { PORTFOLIO_MODULE } from "@/modules/portfolio"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { PatchAdminUpdatePortfolio } from "@/api/admin/portfolios/validators"
+import bcrypt from "bcrypt"
 
 // GET /admin/portfolios/:id - Get a single portfolio with linked data
 export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void> {
@@ -40,7 +41,24 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
 // PATCH /admin/portfolios/:id - Update a portfolio
 export async function PATCH(req: MedusaRequest, res: MedusaResponse): Promise<void> {
   const { id } = req.params
+  const team_id = req.auth_context?.team_id
   const portfolioModuleService: PortfolioModuleService = req.scope.resolve(PORTFOLIO_MODULE)
+
+  if (!team_id) {
+    res.status(403).json({ error: "Team context required" })
+    return
+  }
+
+  // Verify team ownership
+  const existing = await portfolioModuleService.listPortfolioes({
+    filters: { id, team_id },
+    take: 1,
+  })
+
+  if (!existing || existing.length === 0) {
+    res.status(404).json({ error: "Portfolio not found" })
+    return
+  }
 
   // Validate input with Zod
   const validation = PatchAdminUpdatePortfolio.safeParse(req.body)
@@ -56,10 +74,16 @@ export async function PATCH(req: MedusaRequest, res: MedusaResponse): Promise<vo
   const { password, expires_at, ...data } = validation.data
 
   try {
+    // Hash password if provided
+    let password_hash = undefined
+    if (password !== undefined) {
+      password_hash = password ? await bcrypt.hash(password, 10) : null
+    }
+
     const portfolio = await portfolioModuleService.updatePortfolioes({
       id,
       ...data,
-      ...(password !== undefined && { password_hash: password || null }),
+      ...(password_hash !== undefined && { password_hash }),
       ...(expires_at !== undefined && { expires_at: expires_at ? new Date(expires_at) : null }),
     })
 
@@ -72,7 +96,24 @@ export async function PATCH(req: MedusaRequest, res: MedusaResponse): Promise<vo
 // DELETE /admin/portfolios/:id - Delete a portfolio (soft delete)
 export async function DELETE(req: MedusaRequest, res: MedusaResponse): Promise<void> {
   const { id } = req.params
+  const team_id = req.auth_context?.team_id
   const portfolioModuleService: PortfolioModuleService = req.scope.resolve(PORTFOLIO_MODULE)
+
+  if (!team_id) {
+    res.status(403).json({ error: "Team context required" })
+    return
+  }
+
+  // Verify team ownership
+  const existing = await portfolioModuleService.listPortfolioes({
+    filters: { id, team_id },
+    take: 1,
+  })
+
+  if (!existing || existing.length === 0) {
+    res.status(404).json({ error: "Portfolio not found" })
+    return
+  }
 
   try {
     await portfolioModuleService.softDeletePortfolioes([id])

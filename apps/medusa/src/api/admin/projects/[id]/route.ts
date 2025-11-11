@@ -7,7 +7,13 @@ import { PatchAdminUpdateProject } from "@/api/admin/projects/validators"
 // GET /admin/projects/:id - Get a single project with linked data
 export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void> {
   const { id } = req.params
+  const team_id = req.auth_context?.team_id
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+
+  if (!team_id) {
+    res.status(403).json({ error: "Team context required" })
+    return
+  }
 
   try {
     const { data: projects } = await query.graph({
@@ -17,7 +23,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
         "portfolios.*",
         "portfolios.projects.display_order",
       ],
-      filters: { id },
+      filters: { id, team_id },
     })
 
     if (!projects || projects.length === 0) {
@@ -34,7 +40,24 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
 // PATCH /admin/projects/:id - Update a project
 export async function PATCH(req: MedusaRequest, res: MedusaResponse): Promise<void> {
   const { id } = req.params
+  const team_id = req.auth_context?.team_id
   const portfolioModuleService: PortfolioModuleService = req.scope.resolve(PORTFOLIO_MODULE)
+
+  if (!team_id) {
+    res.status(403).json({ error: "Team context required" })
+    return
+  }
+
+  // Verify team ownership
+  const existing = await portfolioModuleService.listProjects({
+    filters: { id, team_id },
+    take: 1,
+  })
+
+  if (!existing || existing.length === 0) {
+    res.status(404).json({ error: "Project not found" })
+    return
+  }
 
   // Validate input with Zod
   const validation = PatchAdminUpdateProject.safeParse(req.body)
@@ -64,7 +87,24 @@ export async function PATCH(req: MedusaRequest, res: MedusaResponse): Promise<vo
 // DELETE /admin/projects/:id - Delete a project (soft delete)
 export async function DELETE(req: MedusaRequest, res: MedusaResponse): Promise<void> {
   const { id } = req.params
+  const team_id = req.auth_context?.team_id
   const portfolioModuleService: PortfolioModuleService = req.scope.resolve(PORTFOLIO_MODULE)
+
+  if (!team_id) {
+    res.status(403).json({ error: "Team context required" })
+    return
+  }
+
+  // Verify team ownership
+  const existing = await portfolioModuleService.listProjects({
+    filters: { id, team_id },
+    take: 1,
+  })
+
+  if (!existing || existing.length === 0) {
+    res.status(404).json({ error: "Project not found" })
+    return
+  }
 
   try {
     await portfolioModuleService.softDeleteProjects([id])

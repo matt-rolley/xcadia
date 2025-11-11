@@ -35,6 +35,7 @@
     "@medusajs/medusa": "2.11.3",
     "@medusajs/types": "^2.11.3",
     "@medusajs/ui": "^4.0.27",
+    "bcrypt": "^6.0.0",
     "resend": "^6.4.1",
     "zod": "^4.1.12"
   },
@@ -42,6 +43,7 @@
     "@medusajs/test-utils": "2.11.3",
     "@swc/core": "1.5.7",
     "@swc/jest": "^0.2.36",
+    "@types/bcrypt": "^6.0.0",
     "@types/jest": "^29.5.13",
     "@types/node": "^20.0.0",
     "@types/react": "^18.3.2",

@@ -1,6 +1,7 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import PortfolioModuleService from "@/modules/portfolio/service"
 import { PORTFOLIO_MODULE } from "@/modules/portfolio"
+import bcrypt from "bcrypt"
 
 // GET /store/portfolios/:slug - Public portfolio viewer
 export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void> {
@@ -31,19 +32,29 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
     return
   }
 
-  // Check password protection (simple access code, not encrypted)
+  // Check password protection with bcrypt
   if (portfolio.password_hash) {
-    const password = req.query.password as string || (req.body as any)?.password
+    // Only accept password in POST body (not query string to avoid logging)
+    const password = (req.body as any)?.password
 
     if (!password) {
       res.status(401).json({
-        error: "Password required",
+        error: "Password required. Use POST with password in body.",
         requires_password: true,
       })
       return
     }
 
-    if (password !== portfolio.password_hash) {
+    try {
+      const isValid = await bcrypt.compare(password, portfolio.password_hash)
+      if (!isValid) {
+        res.status(401).json({
+          error: "Invalid password",
+          requires_password: true,
+        })
+        return
+      }
+    } catch (error) {
       res.status(401).json({
         error: "Invalid password",
         requires_password: true,
