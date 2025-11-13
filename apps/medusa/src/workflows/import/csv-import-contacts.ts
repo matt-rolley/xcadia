@@ -3,6 +3,7 @@ import {
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+import { sanitizeCSVValue } from "@/lib/data-sanitization"
 
 type CsvImportInput = {
   team_id: string
@@ -42,7 +43,8 @@ function parseCSV(content: string): any[] {
     const row: any = {}
 
     headers.forEach((header, index) => {
-      row[header] = values[index] || ""
+      // Sanitize CSV values to prevent formula injection
+      row[header] = sanitizeCSVValue(values[index] || "")
     })
 
     rows.push(row)

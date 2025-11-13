@@ -1,5 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { z } from "zod"
+import { validateWebhookUrl } from "@/lib/webhook-security"
 
 const updateWebhookSchema = z.object({
   name: z.string().min(1).optional(),
@@ -87,6 +88,17 @@ export const PUT = async (
         message: "Invalid request body",
         errors: parsed.error.errors,
       })
+    }
+
+    // Validate webhook URL for SSRF protection if URL is being updated
+    if (parsed.data.url) {
+      const urlValidation = validateWebhookUrl(parsed.data.url)
+      if (!urlValidation.valid) {
+        return res.status(400).json({
+          message: "Invalid webhook URL",
+          error: urlValidation.error,
+        })
+      }
     }
 
     const webhookModuleService = req.scope.resolve("webhookModuleService")

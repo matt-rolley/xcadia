@@ -3,6 +3,7 @@ import {
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+import { sanitizeData } from "@/lib/data-sanitization"
 
 type ExportDataInput = {
   team_id: string
@@ -83,21 +84,7 @@ const collectTeamDataStep = createStep(
 const formatExportDataStep = createStep(
   "format-export-data",
   async ({ data }: { data: any }) => {
-    // Remove sensitive fields before export
-    const sanitizeData = (obj: any) => {
-      if (!obj) return obj
-      const sanitized = { ...obj }
-
-      // Remove common sensitive fields
-      delete sanitized.password
-      delete sanitized.password_hash
-      delete sanitized.token
-      delete sanitized.secret
-      delete sanitized.api_key
-
-      return sanitized
-    }
-
+    // Deep sanitization of all sensitive fields using recursive sanitization
     const formatted = {
       team: sanitizeData(data.team),
       projects: data.projects.map(sanitizeData),
