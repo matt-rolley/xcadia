@@ -56,7 +56,7 @@ const PortfoliosPage = () => {
             Create shareable portfolio collections with password protection
           </p>
         </div>
-        <Link to="/app/portfolios/new">
+        <Link to="/portfolios/new">
           <Button variant="secondary">Create Portfolio</Button>
         </Link>
       </div>
@@ -69,7 +69,7 @@ const PortfoliosPage = () => {
         ) : portfolios.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8">
             <p className="text-ui-fg-subtle mb-4">No portfolios found</p>
-            <Link to="/app/portfolios/new">
+            <Link to="/portfolios/new">
               <Button variant="secondary">Create your first portfolio</Button>
             </Link>
           </div>
@@ -91,7 +91,7 @@ const PortfoliosPage = () => {
                 <Table.Row key={portfolio.id}>
                   <Table.Cell>
                     <Link
-                      to={`/app/portfolios/${portfolio.id}`}
+                      to={`/portfolios/${portfolio.id}`}
                       className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
                     >
                       {portfolio.name}

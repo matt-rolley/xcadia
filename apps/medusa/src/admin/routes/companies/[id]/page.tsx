@@ -266,7 +266,7 @@ const CompanyDetailPage = () => {
       <div className="px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <Heading level="h2">Contacts ({contacts.length})</Heading>
-          <Link to="/app/contacts/new">
+          <Link to="/contacts/new">
             <Button variant="secondary" size="small">Add Contact</Button>
           </Link>
         </div>
@@ -286,7 +286,7 @@ const CompanyDetailPage = () => {
                 <Table.Row key={contact.id}>
                   <Table.Cell>
                     <Link
-                      to={`/app/contacts/${contact.id}`}
+                      to={`/contacts/${contact.id}`}
                       className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
                     >
                       {contact.first_name} {contact.last_name}
@@ -305,7 +305,7 @@ const CompanyDetailPage = () => {
       <div className="px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <Heading level="h2">Deals ({deals.length})</Heading>
-          <Link to="/app/deals/new">
+          <Link to="/deals/new">
             <Button variant="secondary" size="small">Add Deal</Button>
           </Link>
         </div>
@@ -326,7 +326,7 @@ const CompanyDetailPage = () => {
                 <Table.Row key={deal.id}>
                   <Table.Cell>
                     <Link
-                      to={`/app/deals/${deal.id}`}
+                      to={`/deals/${deal.id}`}
                       className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
                     >
                       {deal.title}

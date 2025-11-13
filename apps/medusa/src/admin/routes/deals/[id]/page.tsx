@@ -1,4 +1,4 @@
-import { Container, Heading, Button, Label, Input, Textarea, Badge, Table, Select } from "@medusajs/ui"
+import { Container, Heading, Button, Label, Input, Textarea, Badge, Select } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import { Trash, PencilSquare } from "@medusajs/icons"
@@ -290,7 +290,7 @@ const DealDetailPage = () => {
             <Label>Company</Label>
             {deal.company ? (
               <Link
-                to={`/app/companies/${deal.company.id}`}
+                to={`/companies/${deal.company.id}`}
                 className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover text-sm"
               >
                 {deal.company.name}
@@ -303,7 +303,7 @@ const DealDetailPage = () => {
             <Label>Contact</Label>
             {deal.contact ? (
               <Link
-                to={`/app/contacts/${deal.contact.id}`}
+                to={`/contacts/${deal.contact.id}`}
                 className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover text-sm"
               >
                 {deal.contact.first_name} {deal.contact.last_name}

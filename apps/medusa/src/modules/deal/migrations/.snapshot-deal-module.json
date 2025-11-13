@@ -160,6 +160,15 @@
           "nullable": true,
           "mappedType": "text"
         },
+        "cloned_from_deal_id": {
+          "name": "cloned_from_deal_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "text"
+        },
         "metadata": {
           "name": "metadata",
           "type": "jsonb",

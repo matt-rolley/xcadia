@@ -3,6 +3,7 @@ import {
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { sanitizeData } from "@/lib/data-sanitization"
 
 type ExportDataInput = {
@@ -25,7 +26,31 @@ type ExportDataOutput = {
   }
 }
 
-// Step 1: Collect team data
+// Step 1: Validate user is a member of the team
+const validateTeamMembershipStep = createStep(
+  "validate-team-membership",
+  async ({ team_id, requested_by }: { team_id: string; requested_by: string }, { container }) => {
+    const query = container.resolve(ContainerRegistrationKeys.QUERY)
+
+    // Check if user is a member of the team
+    const { data: members } = await query.graph({
+      entity: "team_member",
+      fields: ["id", "team_id", "user_id"],
+      filters: {
+        team_id: team_id,
+        user_id: requested_by,
+      },
+    })
+
+    if (!members || members.length === 0) {
+      throw new Error("You are not a member of this team")
+    }
+
+    return new StepResponse({ validated: true })
+  }
+)
+
+// Step 2: Collect team data
 const collectTeamDataStep = createStep(
   "collect-team-data",
   async ({ team_id }: { team_id: string }, { container }) => {
@@ -80,7 +105,7 @@ const collectTeamDataStep = createStep(
   }
 )
 
-// Step 2: Format data for export (remove sensitive fields)
+// Step 3: Format data for export (remove sensitive fields)
 const formatExportDataStep = createStep(
   "format-export-data",
   async ({ data }: { data: any }) => {
@@ -104,10 +129,16 @@ const formatExportDataStep = createStep(
 export const exportTeamDataWorkflow = createWorkflow(
   "export-team-data",
   function (input: ExportDataInput): WorkflowResponse<ExportDataOutput> {
-    // Collect all team data
+    // Step 1: Validate user is a member of the team
+    validateTeamMembershipStep({
+      team_id: input.team_id,
+      requested_by: input.requested_by,
+    })
+
+    // Step 2: Collect all team data
     const data = collectTeamDataStep({ team_id: input.team_id })
 
-    // Format for export
+    // Step 3: Format for export
     const { formatted } = formatExportDataStep({ data })
 
     return new WorkflowResponse({

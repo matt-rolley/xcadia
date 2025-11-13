@@ -1,7 +1,7 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Container, Heading, Button, Table, Badge, Label, Input, Select, Textarea } from "@medusajs/ui"
+import { Container, Heading, Button, Table, Badge, Label, Input, Select } from "@medusajs/ui"
 import { useEffect, useState } from "react"
-import { Trash, PencilSquare } from "@medusajs/icons"
+import { Trash } from "@medusajs/icons"
 
 type Webhook = {
   id: string

@@ -4,7 +4,7 @@ const env = process.env.NODE_ENV || 'development'
 
 loadEnv(env, process.cwd())
 
-const modules = env === 'production' && process.env.REDIS_URL
+const redisModules = env === 'production' && process.env.REDIS_URL
   ? [
       {
         resolve: '@medusajs/medusa/cache-redis',
@@ -29,6 +29,28 @@ const modules = env === 'production' && process.env.REDIS_URL
     ]
   : []
 
+const paymentModules = process.env.STRIPE_API_KEY
+  ? [
+      {
+        resolve: '@medusajs/medusa/payment',
+        options: {
+          providers: [
+            {
+              resolve: '@medusajs/medusa/payment-stripe',
+              id: 'stripe',
+              options: {
+                apiKey: process.env.STRIPE_API_KEY,
+                webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+                capture: true,
+                automatic_payment_methods: true,
+              },
+            },
+          ],
+        },
+      },
+    ]
+  : []
+
 module.exports = defineConfig({
   admin: {
     disable: process.env.DISABLE_MEDUSA_ADMIN === 'true',
@@ -38,7 +60,8 @@ module.exports = defineConfig({
   projectConfig: {
     workerMode: (process.env.WORKER_MODE || 'shared') as 'shared' | 'worker' | 'server',
     databaseUrl: process.env.DATABASE_URL,
-    redisUrl: process.env.REDIS_URL,
+    // Only set redisUrl if it's actually configured to avoid connection errors
+    ...(process.env.REDIS_URL ? { redisUrl: process.env.REDIS_URL } : {}),
     http: {
       storeCors: process.env.STORE_CORS!,
       adminCors: process.env.ADMIN_CORS!,
@@ -48,7 +71,8 @@ module.exports = defineConfig({
     },
   },
   modules: [
-    ...modules,
+    ...redisModules,
+    ...paymentModules,
     {
       resolve: "./src/modules/team",
     },
@@ -97,23 +121,6 @@ module.exports = defineConfig({
     },
     {
       resolve: "./src/modules/email-domain",
-    },
-    {
-      resolve: '@medusajs/medusa/payment',
-      options: {
-        providers: [
-          {
-            resolve: '@medusajs/medusa/payment-stripe',
-            id: 'stripe',
-            options: {
-              apiKey: process.env.STRIPE_API_KEY,
-              webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-              capture: true,
-              automatic_payment_methods: true,
-            },
-          },
-        ],
-      },
     },
     {
       resolve: "@medusajs/medusa/notification",

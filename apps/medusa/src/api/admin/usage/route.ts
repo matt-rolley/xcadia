@@ -47,36 +47,22 @@ export const GET = async (
 
     return res.json({
       usage: {
-        storage: {
-          current: usage.storage_gb,
-          limit: usage.storage_limit_gb,
-          percentage: Math.round(storagePercentage),
-          status: getStatus(storagePercentage),
-        },
-        projects: {
-          current: usage.project_count,
-          limit: usage.project_limit,
-          percentage: Math.round(projectPercentage),
-          status: getStatus(projectPercentage),
-        },
-        emails: {
-          current: usage.email_count,
-          limit: usage.email_limit,
-          percentage: Math.round(emailPercentage),
-          status: getStatus(emailPercentage),
-        },
-        portfolio_views: {
-          current: usage.portfolio_view_count,
-          // No limit for views
-        },
-      },
-      plan: {
-        name: usage.plan_name,
-        price: usage.plan_price,
-      },
-      billing_period: {
-        start: usage.period_start,
-        end: usage.period_end,
+        id: usage.id,
+        period_start: usage.period_start,
+        period_end: usage.period_end,
+        storage_gb: usage.storage_gb,
+        storage_limit_gb: usage.storage_limit_gb,
+        project_count: usage.project_count,
+        project_limit: usage.project_limit,
+        email_count: usage.email_count,
+        email_limit: usage.email_limit,
+        portfolio_view_count: usage.portfolio_view_count,
+        storage_warning_sent: usage.storage_warning_sent,
+        project_warning_sent: usage.project_warning_sent,
+        email_warning_sent: usage.email_warning_sent,
+        plan_name: usage.plan_name,
+        plan_price: usage.plan_price,
+        metadata: usage.metadata,
       },
     })
   } catch (error) {

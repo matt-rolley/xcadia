@@ -103,7 +103,7 @@ const DealsPage = () => {
           >
             List
           </Button>
-          <Link to="/app/deals/new">
+          <Link to="/deals/new">
             <Button variant="secondary">Add Deal</Button>
           </Link>
         </div>
@@ -118,7 +118,7 @@ const DealsPage = () => {
         ) : deals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8">
             <p className="text-ui-fg-subtle mb-4">No deals found</p>
-            <Link to="/app/deals/new">
+            <Link to="/deals/new">
               <Button variant="secondary">Create your first deal</Button>
             </Link>
           </div>
@@ -140,7 +140,7 @@ const DealsPage = () => {
 
                   <div className="space-y-2">
                     {stageDeals.map((deal) => (
-                      <Link key={deal.id} to={`/app/deals/${deal.id}`}>
+                      <Link key={deal.id} to={`/deals/${deal.id}`}>
                         <div className="border border-ui-border-base rounded-lg p-3 hover:border-ui-border-interactive cursor-pointer bg-ui-bg-base">
                           <h4 className="font-medium text-sm mb-1">{deal.title}</h4>
                           <p className="text-sm font-semibold text-ui-fg-interactive mb-2">
@@ -176,7 +176,7 @@ const DealsPage = () => {
           /* List View */
           <div className="space-y-2">
             {deals.map((deal) => (
-              <Link key={deal.id} to={`/app/deals/${deal.id}`}>
+              <Link key={deal.id} to={`/deals/${deal.id}`}>
                 <div className="border border-ui-border-base rounded-lg p-4 hover:border-ui-border-interactive cursor-pointer flex items-center justify-between">
                   <div className="flex-1">
                     <h4 className="font-medium mb-1">{deal.title}</h4>

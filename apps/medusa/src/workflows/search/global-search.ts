@@ -1,6 +1,7 @@
 import {
   createWorkflow,
   WorkflowResponse,
+  transform,
 } from "@medusajs/framework/workflows-sdk"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 
@@ -55,7 +56,7 @@ const searchPortfoliosStep = createStep(
   ) => {
     const portfolioModuleService = container.resolve("portfolioModuleService")
 
-    const portfolios = await portfolioModuleService.listPortfolios({
+    const portfolios = await portfolioModuleService.listPortfolioes({
       filters: {
         team_id,
         $or: [
@@ -152,54 +153,49 @@ export const globalSearchWorkflow = createWorkflow(
   "global-search",
   function (input: GlobalSearchInput): WorkflowResponse<SearchResults> {
     const limit = input.limit_per_type || 10
-    const entityTypes = input.entity_types || ["project", "portfolio", "contact", "company", "deal"]
 
-    // Run searches in parallel for performance
-    let projectResults = { projects: [] }
-    let portfolioResults = { portfolios: [] }
-    let contactResults = { contacts: [] }
-    let companyResults = { companies: [] }
-    let dealResults = { deals: [] }
+    // Always run all searches - the API layer can filter which types to include
+    // Running all searches in parallel is more efficient than conditional execution
+    const projectResults = searchProjectsStep({
+      team_id: input.team_id,
+      query: input.query,
+      limit,
+    })
 
-    if (entityTypes.includes("project")) {
-      projectResults = searchProjectsStep({
-        team_id: input.team_id,
-        query: input.query,
-        limit,
-      })
-    }
+    const portfolioResults = searchPortfoliosStep({
+      team_id: input.team_id,
+      query: input.query,
+      limit,
+    }).config({ name: "search-portfolios-step" })
 
-    if (entityTypes.includes("portfolio")) {
-      portfolioResults = searchPortfoliosStep({
-        team_id: input.team_id,
-        query: input.query,
-        limit,
-      })
-    }
+    const contactResults = searchContactsStep({
+      team_id: input.team_id,
+      query: input.query,
+      limit,
+    }).config({ name: "search-contacts-step" })
 
-    if (entityTypes.includes("contact")) {
-      contactResults = searchContactsStep({
-        team_id: input.team_id,
-        query: input.query,
-        limit,
-      })
-    }
+    const companyResults = searchCompaniesStep({
+      team_id: input.team_id,
+      query: input.query,
+      limit,
+    }).config({ name: "search-companies-step" })
 
-    if (entityTypes.includes("company")) {
-      companyResults = searchCompaniesStep({
-        team_id: input.team_id,
-        query: input.query,
-        limit,
-      })
-    }
+    const dealResults = searchDealsStep({
+      team_id: input.team_id,
+      query: input.query,
+      limit,
+    }).config({ name: "search-deals-step" })
 
-    if (entityTypes.includes("deal")) {
-      dealResults = searchDealsStep({
-        team_id: input.team_id,
-        query: input.query,
-        limit,
-      })
-    }
+    // Use transform to calculate total count
+    const totalCount = transform(
+      { projectResults, portfolioResults, contactResults, companyResults, dealResults },
+      (data) =>
+        data.projectResults.projects.length +
+        data.portfolioResults.portfolios.length +
+        data.contactResults.contacts.length +
+        data.companyResults.companies.length +
+        data.dealResults.deals.length
+    )
 
     return new WorkflowResponse({
       projects: projectResults.projects,
@@ -207,12 +203,7 @@ export const globalSearchWorkflow = createWorkflow(
       contacts: contactResults.contacts,
       companies: companyResults.companies,
       deals: dealResults.deals,
-      total_count:
-        projectResults.projects.length +
-        portfolioResults.portfolios.length +
-        contactResults.contacts.length +
-        companyResults.companies.length +
-        dealResults.deals.length,
+      total_count: totalCount,
     })
   }
 )

@@ -3,6 +3,7 @@ import {
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
 type BulkSendInput = {
   team_id: string
@@ -36,7 +37,39 @@ function interpolateTemplate(
   })
 }
 
-// Step 1: Fetch portfolio and sender details
+// Step 1: Validate all contacts belong to team
+const validateContactsStep = createStep(
+  "validate-contacts-bulk",
+  async ({ contact_ids, team_id }: { contact_ids: string[]; team_id: string }, { container }) => {
+    const query = container.resolve(ContainerRegistrationKeys.QUERY)
+
+    // Fetch all contacts to verify they belong to the team
+    const { data: contacts } = await query.graph({
+      entity: "contact",
+      fields: ["id", "team_id"],
+      filters: { id: contact_ids },
+    })
+
+    if (!contacts || contacts.length === 0) {
+      throw new Error("No contacts found")
+    }
+
+    // Check if we got all the requested contacts
+    if (contacts.length !== contact_ids.length) {
+      throw new Error("Some contacts were not found")
+    }
+
+    // Verify all contacts belong to the team
+    const invalidContacts = contacts.filter(c => c.team_id !== team_id)
+    if (invalidContacts.length > 0) {
+      throw new Error("Some contacts do not belong to your team")
+    }
+
+    return new StepResponse({ validated: true })
+  }
+)
+
+// Step 2: Fetch portfolio and sender details
 const fetchContextStep = createStep(
   "fetch-context",
   async (
@@ -68,7 +101,7 @@ const fetchContextStep = createStep(
   }
 )
 
-// Step 2: Process each contact and send personalized email
+// Step 3: Process each contact and send personalized email
 const sendToContactsStep = createStep(
   "send-to-contacts",
   async (
@@ -168,14 +201,20 @@ const sendToContactsStep = createStep(
 export const bulkSendPortfolioWorkflow = createWorkflow(
   "bulk-send-portfolio",
   function (input: BulkSendInput): WorkflowResponse<BulkSendResult> {
-    // Fetch context
+    // Step 1: Validate all contacts belong to team
+    validateContactsStep({
+      contact_ids: input.contact_ids,
+      team_id: input.team_id,
+    })
+
+    // Step 2: Fetch context
     const { portfolio, team, sender } = fetchContextStep({
       portfolio_id: input.portfolio_id,
       sender_id: input.sender_id,
       team_id: input.team_id,
     })
 
-    // Send to all contacts
+    // Step 3: Send to all contacts
     const { sent_count, failed_count, errors } = sendToContactsStep({
       contact_ids: input.contact_ids,
       subject_template: input.subject_template,

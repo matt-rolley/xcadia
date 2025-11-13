@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { EnvelopeOpen } from "@medusajs/icons"
+import { Envelope } from "@medusajs/icons"
 import { Container, Heading, Table, Button, Badge } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
@@ -58,7 +58,7 @@ const EmailsPage = () => {
             Track and manage email campaign deliverability
           </p>
         </div>
-        <Link to="/app/emails/new">
+        <Link to="/emails/new">
           <Button variant="secondary">Send Email</Button>
         </Link>
       </div>
@@ -129,7 +129,7 @@ const EmailsPage = () => {
 
 export const config = defineRouteConfig({
   label: "Emails",
-  icon: EnvelopeOpen,
+  icon: Envelope,
 })
 
 export default EmailsPage

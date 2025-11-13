@@ -46,7 +46,7 @@ const ProjectsPage = () => {
             Manage your portfolio projects and case studies
           </p>
         </div>
-        <Link to="/app/projects/new">
+        <Link to="/projects/new">
           <Button variant="secondary">Create Project</Button>
         </Link>
       </div>
@@ -59,14 +59,14 @@ const ProjectsPage = () => {
         ) : projects.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8">
             <p className="text-ui-fg-subtle mb-4">No projects found</p>
-            <Link to="/app/projects/new">
+            <Link to="/projects/new">
               <Button variant="secondary">Create your first project</Button>
             </Link>
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-4">
             {projects.map((project) => (
-              <Link key={project.id} to={`/app/projects/${project.id}`}>
+              <Link key={project.id} to={`/projects/${project.id}`}>
                 <div className="border border-ui-border-base rounded-lg p-4 hover:border-ui-border-interactive cursor-pointer">
                   {project.thumbnail_url && (
                     <img

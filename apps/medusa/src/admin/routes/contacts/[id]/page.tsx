@@ -135,7 +135,7 @@ const ContactDetailPage = () => {
           {contact.company && (
             <p className="text-sm text-ui-fg-subtle mt-1">
               <Link
-                to={`/app/companies/${contact.company.id}`}
+                to={`/companies/${contact.company.id}`}
                 className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
               >
                 {contact.company.name}
@@ -289,7 +289,7 @@ const ContactDetailPage = () => {
       <div className="px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <Heading level="h2">Deals ({deals.length})</Heading>
-          <Link to="/app/deals/new">
+          <Link to="/deals/new">
             <Button variant="secondary" size="small">Add Deal</Button>
           </Link>
         </div>
@@ -309,7 +309,7 @@ const ContactDetailPage = () => {
                 <Table.Row key={deal.id}>
                   <Table.Cell>
                     <Link
-                      to={`/app/deals/${deal.id}`}
+                      to={`/deals/${deal.id}`}
                       className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
                     >
                       {deal.title}

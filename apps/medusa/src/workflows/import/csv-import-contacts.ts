@@ -1,6 +1,7 @@
 import {
   createWorkflow,
   WorkflowResponse,
+  transform,
 } from "@medusajs/framework/workflows-sdk"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 import { sanitizeCSVValue } from "@/lib/data-sanitization"
@@ -286,15 +287,38 @@ export const csvImportContactsWorkflow = createWorkflow(
       validatedRows: rowsWithCompanies,
     })
 
-    // Combine all errors
-    const allErrors = [...parseErrors, ...importErrors]
+    // Combine all errors using transform
+    const allErrors = transform(
+      { parseErrors, importErrors },
+      (data) => [...data.parseErrors, ...data.importErrors]
+    )
+
+    const totalRows = transform(
+      { validatedRows, parseErrors },
+      (data) => data.validatedRows.length + data.parseErrors.length
+    )
+
+    const contactsCount = transform(
+      { contactsCreated },
+      (data) => data.contactsCreated.length
+    )
+
+    const errorsCount = transform(
+      { allErrors },
+      (data) => data.allErrors.length
+    )
+
+    const status = transform(
+      { errorsCount },
+      (data) => data.errorsCount === 0 ? "completed" : "completed_with_errors"
+    )
 
     return new WorkflowResponse({
       import_id: `import_${Date.now()}`,
-      status: allErrors.length === 0 ? "completed" : "completed_with_errors",
-      total_rows: validatedRows.length + parseErrors.length,
-      successful: contactsCreated.length,
-      failed: allErrors.length,
+      status,
+      total_rows: totalRows,
+      successful: contactsCount,
+      failed: errorsCount,
       errors: allErrors,
       contacts_created: contactsCreated,
       companies_created: companiesCreated,

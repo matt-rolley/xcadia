@@ -85,8 +85,8 @@ export const POST = async (
     const { domain, from_name, from_email } = parsed.data
 
     // Validate that from_email matches domain
-    const emailDomain = from_email.split("@")[1]
-    if (emailDomain !== domain) {
+    const emailAddressDomain = from_email.split("@")[1]
+    if (emailAddressDomain !== domain) {
       return res.status(400).json({
         message: `Email address must be on domain ${domain}`,
       })

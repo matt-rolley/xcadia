@@ -46,7 +46,7 @@ const ContactsPage = () => {
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
         <Heading level="h1">Contacts</Heading>
-        <Link to="/app/contacts/new">
+        <Link to="/contacts/new">
           <Button variant="secondary">Add Contact</Button>
         </Link>
       </div>
@@ -59,7 +59,7 @@ const ContactsPage = () => {
         ) : contacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8">
             <p className="text-ui-fg-subtle mb-4">No contacts found</p>
-            <Link to="/app/contacts/new">
+            <Link to="/contacts/new">
               <Button variant="secondary">Create your first contact</Button>
             </Link>
           </div>
@@ -82,7 +82,7 @@ const ContactsPage = () => {
                 <Table.Row key={contact.id}>
                   <Table.Cell>
                     <Link
-                      to={`/app/contacts/${contact.id}`}
+                      to={`/contacts/${contact.id}`}
                       className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
                     >
                       {contact.first_name} {contact.last_name}
@@ -94,7 +94,7 @@ const ContactsPage = () => {
                   <Table.Cell>
                     {contact.company ? (
                       <Link
-                        to={`/app/companies/${contact.company.id}`}
+                        to={`/companies/${contact.company.id}`}
                         className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
                       >
                         {contact.company.name}

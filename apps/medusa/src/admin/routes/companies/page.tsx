@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Building } from "@medusajs/icons"
+import { Buildings } from "@medusajs/icons"
 import { Container, Heading, Table, Button, Badge } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
@@ -41,7 +41,7 @@ const CompaniesPage = () => {
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
         <Heading level="h1">Companies</Heading>
-        <Link to="/app/companies/new">
+        <Link to="/companies/new">
           <Button variant="secondary">Add Company</Button>
         </Link>
       </div>
@@ -54,7 +54,7 @@ const CompaniesPage = () => {
         ) : companies.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8">
             <p className="text-ui-fg-subtle mb-4">No companies found</p>
-            <Link to="/app/companies/new">
+            <Link to="/companies/new">
               <Button variant="secondary">Create your first company</Button>
             </Link>
           </div>
@@ -76,7 +76,7 @@ const CompaniesPage = () => {
                 <Table.Row key={company.id}>
                   <Table.Cell>
                     <Link
-                      to={`/app/companies/${company.id}`}
+                      to={`/companies/${company.id}`}
                       className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
                     >
                       {company.name}
@@ -108,7 +108,7 @@ const CompaniesPage = () => {
 
 export const config = defineRouteConfig({
   label: "Companies",
-  icon: Building,
+  icon: Buildings,
 })
 
 export default CompaniesPage

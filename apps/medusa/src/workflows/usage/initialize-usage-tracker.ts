@@ -59,7 +59,9 @@ const createUsageTrackerStep = createStep(
 
     if (existing && existing.length > 0) {
       console.log(`Usage tracker already exists for team ${team_id}`)
-      return new StepResponse({ usageTracker: existing[0] })
+      return new StepResponse({ usageTracker: existing[0] }, async () => {
+        // No rollback needed for existing tracker
+      })
     }
 
     // Create new usage tracker

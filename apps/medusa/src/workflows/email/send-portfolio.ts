@@ -63,17 +63,25 @@ const fetchPortfolioDataStep = createStep(
   }
 )
 
-// Step 3: Fetch contacts
+// Step 3: Fetch and validate contacts
 const fetchContactsStep = createStep(
   "fetch-contacts",
-  async ({ contact_ids }: { contact_ids: string[] }, { container }) => {
+  async ({ contact_ids, team_id }: { contact_ids: string[]; team_id: string }, { container }) => {
     const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
     const { data: contacts } = await query.graph({
       entity: "contact",
       fields: ["*", "company.*"],
-      filters: { id: contact_ids },
+      filters: {
+        id: contact_ids,
+        team_id: team_id, // Explicitly filter by team_id
+      },
     })
+
+    // Verify we got all the requested contacts
+    if (!contacts || contacts.length !== contact_ids.length) {
+      throw new Error("Some contacts were not found or do not belong to your team")
+    }
 
     return new StepResponse({ contacts })
   }
@@ -288,6 +296,7 @@ export const sendPortfolioWorkflow = createWorkflow(
     // Step 3: Fetch contacts
     const { contacts } = fetchContactsStep({
       contact_ids: input.contact_ids,
+      team_id: input.team_id,
     })
 
     // Step 4: Create portfolio email records

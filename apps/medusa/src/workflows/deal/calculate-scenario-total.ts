@@ -3,9 +3,11 @@ import {
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
 type CalculateScenarioInput = {
   scenario_id: string
+  team_id: string
 }
 
 type CalculateScenarioOutput = {
@@ -14,7 +16,34 @@ type CalculateScenarioOutput = {
   total: number
 }
 
-// Step 1: Fetch all line items for the scenario
+// Step 1: Validate scenario belongs to team
+const validateScenarioStep = createStep(
+  "validate-scenario-ownership",
+  async ({ scenario_id, team_id }: { scenario_id: string; team_id: string }, { container }) => {
+    const query = container.resolve(ContainerRegistrationKeys.QUERY)
+
+    // Fetch scenario with its deal to check team ownership
+    const { data: scenarios } = await query.graph({
+      entity: "deal_scenario",
+      fields: ["id", "deal.*"],
+      filters: { id: scenario_id },
+    })
+
+    if (!scenarios || scenarios.length === 0) {
+      throw new Error("Scenario not found")
+    }
+
+    const scenario = scenarios[0]
+
+    if (!scenario.deal || scenario.deal.team_id !== team_id) {
+      throw new Error("Scenario does not belong to your team")
+    }
+
+    return new StepResponse({ validated: true })
+  }
+)
+
+// Step 2: Fetch all line items for the scenario
 const fetchLineItemsStep = createStep(
   "fetch-line-items",
   async ({ scenario_id }: { scenario_id: string }, { container }) => {
@@ -28,7 +57,7 @@ const fetchLineItemsStep = createStep(
   }
 )
 
-// Step 2: Calculate subtotal from line items
+// Step 3: Calculate subtotal from line items
 const calculateSubtotalStep = createStep(
   "calculate-subtotal",
   async ({ lineItems }: { lineItems: any[] }) => {
@@ -40,7 +69,7 @@ const calculateSubtotalStep = createStep(
   }
 )
 
-// Step 3: Fetch scenario to get tax/discount rates
+// Step 4: Fetch scenario to get tax/discount rates
 const fetchScenarioStep = createStep(
   "fetch-scenario",
   async ({ scenario_id }: { scenario_id: string }, { container }) => {
@@ -52,7 +81,7 @@ const fetchScenarioStep = createStep(
   }
 )
 
-// Step 4: Calculate tax and discounts
+// Step 5: Calculate tax and discounts
 const calculateTotalsStep = createStep(
   "calculate-totals",
   async (
@@ -85,7 +114,7 @@ const calculateTotalsStep = createStep(
   }
 )
 
-// Step 5: Update scenario with calculated values
+// Step 6: Update scenario with calculated values
 const updateScenarioStep = createStep(
   "update-scenario",
   async (
@@ -120,26 +149,32 @@ const updateScenarioStep = createStep(
 export const calculateScenarioTotalWorkflow = createWorkflow(
   "calculate-scenario-total",
   function (input: CalculateScenarioInput): WorkflowResponse<CalculateScenarioOutput> {
-    // Step 1: Fetch line items
+    // Step 1: Validate scenario belongs to team
+    validateScenarioStep({
+      scenario_id: input.scenario_id,
+      team_id: input.team_id,
+    })
+
+    // Step 2: Fetch line items
     const { lineItems } = fetchLineItemsStep({
       scenario_id: input.scenario_id,
     })
 
-    // Step 2: Calculate subtotal
+    // Step 3: Calculate subtotal
     const { subtotal } = calculateSubtotalStep({ lineItems })
 
-    // Step 3: Fetch scenario
+    // Step 4: Fetch scenario
     const { scenario } = fetchScenarioStep({
       scenario_id: input.scenario_id,
     })
 
-    // Step 4: Calculate totals
+    // Step 5: Calculate totals
     const { subtotal: finalSubtotal, taxAmount, discountAmount, total } = calculateTotalsStep({
       subtotal,
       scenario,
     })
 
-    // Step 5: Update scenario
+    // Step 6: Update scenario
     updateScenarioStep({
       scenario_id: input.scenario_id,
       subtotal: finalSubtotal,

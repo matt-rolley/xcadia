@@ -32,6 +32,9 @@ const Deal = model.define("deal", {
   created_by: model.text(), // user_id who created deal
   assigned_to: model.text().nullable(), // user_id assigned to this deal
 
+  // Cloning
+  cloned_from_deal_id: model.text().nullable(), // Original deal if this was cloned
+
   // Metadata for custom fields
   metadata: model.json().nullable(),
 })

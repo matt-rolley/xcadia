@@ -1,7 +1,7 @@
 import { Container, Heading, Button, Label, Input, Textarea, Badge, Table, Switch } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
-import { Trash, PencilSquare, Copy } from "@medusajs/icons"
+import { Trash, PencilSquare, CloneDashed } from "@medusajs/icons"
 
 type Portfolio = {
   id: string
@@ -176,7 +176,7 @@ const PortfolioDetailPage = () => {
                 {getPublicUrl()}
               </code>
               <Button size="small" variant="secondary" onClick={copyUrl}>
-                <Copy />
+                <CloneDashed />
               </Button>
             </div>
           </div>
@@ -235,7 +235,7 @@ const PortfolioDetailPage = () => {
       <div className="px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <Heading level="h2">Projects ({portfolio.projects?.length || 0})</Heading>
-          <Link to="/app/projects/new">
+          <Link to="/projects/new">
             <Button variant="secondary" size="small">Add Project</Button>
           </Link>
         </div>
@@ -256,7 +256,7 @@ const PortfolioDetailPage = () => {
                 <Table.Row key={project.id}>
                   <Table.Cell>
                     <Link
-                      to={`/app/projects/${project.id}`}
+                      to={`/projects/${project.id}`}
                       className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
                     >
                       {project.name}
